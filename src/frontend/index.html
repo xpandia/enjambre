@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enjambre — Decentralized Swarm Coordination</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0d1117;
+      --bg-elevated: #161b22;
+      --bg-card: #1c2128;
+      --green: #00d26a;
+      --green-dim: #00d26a33;
+      --green-glow: #00d26a66;
+      --earth: #c8a96e;
+      --earth-dim: #c8a96e22;
+      --soil: #8b6f47;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #484f58;
+      --border: #30363d;
+      --radius: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 0 48px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(13, 17, 23, 0.8);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      transition: background 0.3s;
+    }
+
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--green);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--bg);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-links a:hover { color: var(--green); }
+
+    .nav-cta {
+      padding: 10px 24px;
+      background: var(--green);
+      color: var(--bg) !important;
+      border-radius: 8px;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 24px var(--green-glow);
+      color: var(--bg) !important;
+    }
+
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+
+    .nav-hamburger span {
+      width: 24px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: 0.3s;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    #swarm-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .hero-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, var(--green-dim) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 30% 70%, var(--earth-dim) 0%, transparent 60%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 900px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: var(--green-dim);
+      border: 1px solid rgba(0, 210, 106, 0.2);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+      margin-bottom: 32px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero-badge .pulse {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.5); }
+    }
+
+    .hero h1 {
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -3px;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 .line { display: block; }
+    .hero h1 .green { color: var(--green); }
+    .hero h1 .earth { color: var(--earth); }
+
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto 48px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      padding: 16px 40px;
+      background: var(--green);
+      color: var(--bg);
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.3s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px var(--green-glow);
+    }
+
+    .btn-secondary {
+      padding: 16px 40px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      background: var(--bg-elevated);
+    }
+
+    .hero-metrics {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-top: 80px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .metric {
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -1px;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 140px 24px;
+      position: relative;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--green);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 4.5vw, 56px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 560px;
+    }
+
+    /* ── PROBLEM ── */
+    .problem { background: var(--bg); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      margin-top: 64px;
+    }
+
+    .problem-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--green);
+      transform: translateY(-4px);
+    }
+
+    .stat-card .stat-number {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--green), var(--earth));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card .stat-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .problem-visual {
+      position: relative;
+      height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .field-grid {
+      width: 320px;
+      height: 320px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      gap: 4px;
+      transform: perspective(800px) rotateX(35deg) rotateZ(-10deg);
+    }
+
+    .field-cell {
+      border-radius: 3px;
+      animation: fieldPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes fieldPulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.9; }
+    }
+
+    /* ── SOLUTION ── */
+    .solution {
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .solution-features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 64px;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 32px;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-card:hover {
+      border-color: rgba(0, 210, 106, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+
+    .feature-icon.green { background: var(--green-dim); }
+    .feature-icon.earth { background: var(--earth-dim); }
+    .feature-icon.mixed {
+      background: linear-gradient(135deg, var(--green-dim), var(--earth-dim));
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .feature-card p {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-it-works { background: var(--bg); }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+      margin-top: 80px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 52px;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green), var(--earth), var(--green));
+      opacity: 0.3;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step-number {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--green);
+      margin: 0 auto 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .step h3 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .step p {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+
+    /* ── SWARM VIZ ── */
+    .swarm-viz {
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 100px 24px;
+      text-align: center;
+    }
+
+    #swarm-demo {
+      width: 100%;
+      max-width: 900px;
+      height: 400px;
+      margin: 48px auto 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .swarm-status {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      margin-top: 32px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-dot.active { background: var(--green); }
+    .status-dot.syncing { background: var(--earth); animation-delay: 0.5s; }
+    .status-dot.scanning { background: #58a6ff; animation-delay: 1s; }
+
+    /* ── USE CASES ── */
+    .use-cases { background: var(--bg); }
+
+    .cases-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 64px;
+    }
+
+    .case-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .case-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .case-visual {
+      height: 200px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .case-visual canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .case-content {
+      padding: 32px;
+    }
+
+    .case-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+
+    .case-card h3 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .case-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── TECH STACK ── */
+    .tech {
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tech-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+      margin-top: 64px;
+    }
+
+    .tech-layers {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tech-layer {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: border-color 0.3s, transform 0.2s;
+      cursor: default;
+    }
+
+    .tech-layer:hover {
+      border-color: var(--green);
+      transform: translateX(8px);
+    }
+
+    .layer-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .layer-icon.edge { background: #da3633aa; }
+    .layer-icon.ai { background: #a371f7aa; }
+    .layer-icon.mesh { background: var(--green-dim); }
+    .layer-icon.ui { background: #58a6ffaa; }
+    .layer-icon.data { background: var(--earth-dim); }
+
+    .layer-info h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .layer-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .tech-specs {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+    }
+
+    .tech-specs h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 28px;
+      letter-spacing: -0.5px;
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .spec-row:last-child { border-bottom: none; }
+
+    .spec-label {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .spec-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--green);
+      text-align: right;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--bg);
+      text-align: center;
+      padding: 160px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--green-dim), transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-section h2 {
+      font-size: clamp(36px, 5vw, 64px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 20px;
+      line-height: 1.05;
+    }
+
+    .cta-section p {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .footer-left strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--green); }
+
+    /* ── ANIMATIONS ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 968px) {
+      nav { padding: 0 24px; }
+
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 72px;
+        left: 0;
+        right: 0;
+        background: var(--bg-elevated);
+        border-bottom: 1px solid var(--border);
+        padding: 24px;
+        gap: 20px;
+      }
+
+      .problem-grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .problem-visual { display: none; }
+
+      .solution-features,
+      .steps,
+      .cases-grid {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .steps::before { display: none; }
+
+      .tech-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .hero-metrics {
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { letter-spacing: -1.5px; }
+      .hero-actions { flex-direction: column; align-items: center; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+      section { padding: 80px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <div class="logo-icon">E</div>
+      Enjambre
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#problem">Problema</a></li>
+      <li><a href="#solution">Solucion</a></li>
+      <li><a href="#how">Proceso</a></li>
+      <li><a href="#cases">Casos de Uso</a></li>
+      <li><a href="#tech">Stack</a></li>
+      <li><a href="#cta" class="nav-cta">Unirse al Enjambre</a></li>
+    </ul>
+    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <canvas id="swarm-canvas"></canvas>
+    <div class="hero-gradient"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="pulse"></span>
+        The Vertex Swarm Challenge 2026
+      </div>
+      <h1>
+        <span class="line">Coordina.</span>
+        <span class="line green">Cultiva.</span>
+        <span class="line earth">Conquista.</span>
+      </h1>
+      <p class="hero-sub">
+        Coordinacion descentralizada de enjambres de drones agricolas.
+        Sin servidores. Sin limites. Solo inteligencia colectiva volando sobre la tierra.
+      </p>
+      <div class="hero-actions">
+        <a href="#how" class="btn-primary">Ver en Accion &#8594;</a>
+        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank">GitHub &#8599;</a>
+      </div>
+      <div class="hero-metrics">
+        <div class="metric">
+          <div class="metric-value">40%</div>
+          <div class="metric-label">Tierra cultivable mundial en LATAM</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">$65B</div>
+          <div class="metric-label">Perdidos anualmente en ineficiencia</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">0</div>
+          <div class="metric-label">Servidores centrales requeridos</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem" id="problem">
+    <div class="container">
+      <div class="problem-grid">
+        <div>
+          <div class="section-label reveal">El Problema</div>
+          <h2 class="section-title reveal reveal-delay-1">La tierra produce.<br>La tecnologia <span style="color:var(--earth)">no llega.</span></h2>
+          <p class="section-subtitle reveal reveal-delay-2">
+            Los drones agricolas existen, pero vuelan solos. No se coordinan, no comparten datos, no escalan.
+            La agricultura de precision es un privilegio de los que tienen conectividad y capital.
+          </p>
+          <div class="problem-stats reveal reveal-delay-3" style="margin-top:40px">
+            <div class="stat-card">
+              <div class="stat-number">73%</div>
+              <div class="stat-desc">Agricultores LATAM sin acceso a tecnologia de precision</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">2.4x</div>
+              <div class="stat-desc">Sobreuso de pesticidas por falta de datos en tiempo real</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">35%</div>
+              <div class="stat-desc">Agua desperdiciada en riego sin sensores coordinados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">1</div>
+              <div class="stat-desc">Punto unico de falla en sistemas centralizados</div>
+            </div>
+          </div>
+        </div>
+        <div class="problem-visual">
+          <div class="field-grid" id="fieldGrid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUTION -->
+  <section class="solution" id="solution">
+    <div class="container">
+      <div class="section-label reveal">La Solucion</div>
+      <h2 class="section-title reveal reveal-delay-1">BitTorrent para<br>la <span style="color:var(--green)">agricultura.</span></h2>
+      <p class="section-subtitle reveal reveal-delay-2">
+        Cada dron es un nodo autonomo. Juntos forman un enjambre inteligente que se auto-organiza,
+        comparte datos y actua colectivamente.
+      </p>
+      <div class="solution-features">
+        <div class="feature-card reveal">
+          <div class="feature-icon green">&#9670;</div>
+          <h3>Descentralizado</h3>
+          <p>Sin servidor central, sin punto unico de falla. Los drones se descubren entre si via mDNS y forman una mesh P2P autonoma.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon earth">&#9671;</div>
+          <h3>Inteligencia Colectiva</h3>
+          <p>Cada dron ejecuta modelos TinyML on-device. El enjambre comparte inferencias via MQTT para decisiones coordinadas en milisegundos.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon mixed">&#9674;</div>
+          <h3>Edge-First</h3>
+          <p>Funciona 100% offline. Los datos se procesan donde se generan. Sincroniza con la nube cuando hay conectividad, no cuando la necesita.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="how">
+    <div class="container">
+      <div style="text-align:center">
+        <div class="section-label reveal">Proceso</div>
+        <h2 class="section-title reveal reveal-delay-1">Tres pasos.<br><span style="color:var(--green)">Cero complejidad.</span></h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-number">1</div>
+          <div class="step-icon">&#128752;</div>
+          <h3>Desplegar</h3>
+          <p>Coloca los drones al borde del campo. Se auto-descubren via mesh P2P y particionan el terreno por consenso descentralizado.</p>
+        </div>
+        <div class="step reveal reveal-delay-1">
+          <div class="step-number">2</div>
+          <div class="step-icon">&#128257;</div>
+          <h3>Coordinar</h3>
+          <p>El enjambre comparte lecturas NDVI, humedad y deteccion de plagas en tiempo real. Las tareas se redistribuyen dinamicamente.</p>
+        </div>
+        <div class="step reveal reveal-delay-2">
+          <div class="step-number">3</div>
+          <div class="step-icon">&#127793;</div>
+          <h3>Actuar</h3>
+          <p>Fumigacion, siembra y monitoreo de precision ejecutados colectivamente. El dashboard muestra telemetria en vivo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SWARM VISUALIZATION -->
+  <div class="swarm-viz">
+    <div class="section-label reveal">Visualizacion en Vivo</div>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center">
+      Mira el <span style="color:var(--green)">enjambre</span> pensar.
+    </h2>
+    <canvas id="swarm-demo"></canvas>
+    <div class="swarm-status reveal">
+      <div class="status-item"><span class="status-dot active"></span> 12 Drones activos</div>
+      <div class="status-item"><span class="status-dot syncing"></span> Sincronizando datos</div>
+      <div class="status-item"><span class="status-dot scanning"></span> Escaneando terreno</div>
+    </div>
+  </div>
+
+  <!-- USE CASES -->
+  <section class="use-cases" id="cases">
+    <div class="container">
+      <div style="text-align:center">
+        <div class="section-label reveal">Casos de Uso</div>
+        <h2 class="section-title reveal reveal-delay-1">Un protocolo.<br><span style="color:var(--earth)">Infinitas misiones.</span></h2>
+      </div>
+      <div class="cases-grid">
+        <div class="case-card reveal">
+          <div class="case-visual" style="background: linear-gradient(135deg, #0d2818, #1a4731);">
+            <canvas class="case-canvas" data-case="agri"></canvas>
+          </div>
+          <div class="case-content">
+            <div class="case-tag">Agricultura</div>
+            <h3>Precision a Escala</h3>
+            <p>Fumigacion y monitoreo coordinado sobre miles de hectareas. Cero superposicion. Cero desperdicio. Cobertura total.</p>
+          </div>
+        </div>
+        <div class="case-card reveal reveal-delay-1">
+          <div class="case-visual" style="background: linear-gradient(135deg, #1a1520, #2d1f3d);">
+            <canvas class="case-canvas" data-case="logistics"></canvas>
+          </div>
+          <div class="case-content">
+            <div class="case-tag">Logistica</div>
+            <h3>Ultima Milla Rural</h3>
+            <p>Entrega coordinada de suministros en zonas sin infraestructura vial. El enjambre optimiza rutas en tiempo real.</p>
+          </div>
+        </div>
+        <div class="case-card reveal reveal-delay-2">
+          <div class="case-visual" style="background: linear-gradient(135deg, #1a1008, #3d2810);">
+            <canvas class="case-canvas" data-case="rescue"></canvas>
+          </div>
+          <div class="case-content">
+            <div class="case-tag">Rescate</div>
+            <h3>Respuesta a Desastres</h3>
+            <p>Evaluacion post-huracan de danos en cultivos sobre terreno inundado o inaccesible. Cobertura masiva, cero riesgo humano.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section class="tech" id="tech">
+    <div class="container">
+      <div class="section-label reveal">Stack Tecnico</div>
+      <h2 class="section-title reveal reveal-delay-1">Ingenieria sin<br><span style="color:var(--green)">compromisos.</span></h2>
+      <div class="tech-layout">
+        <div class="tech-layers">
+          <div class="tech-layer reveal">
+            <div class="layer-icon edge">&#9881;</div>
+            <div class="layer-info">
+              <h4>Edge Runtime</h4>
+              <p>Rust + C++ &mdash; Control de vuelo y fusion de sensores en tiempo real</p>
+            </div>
+          </div>
+          <div class="tech-layer reveal reveal-delay-1">
+            <div class="layer-icon ai">&#9733;</div>
+            <div class="layer-info">
+              <h4>Swarm Intelligence</h4>
+              <p>TinyML &mdash; Modelos on-device para planificacion de rutas y deteccion de anomalias</p>
+            </div>
+          </div>
+          <div class="tech-layer reveal reveal-delay-2">
+            <div class="layer-icon mesh">&#9672;</div>
+            <div class="layer-info">
+              <h4>P2P Mesh Network</h4>
+              <p>libp2p + MQTT + WebRTC &mdash; Comunicacion dron-a-dron sin infraestructura</p>
+            </div>
+          </div>
+          <div class="tech-layer reveal reveal-delay-3">
+            <div class="layer-icon ui">&#9635;</div>
+            <div class="layer-info">
+              <h4>Dashboard</h4>
+              <p>React + Three.js + D3 &mdash; Visualizacion y control de mision en tiempo real</p>
+            </div>
+          </div>
+          <div class="tech-layer reveal">
+            <div class="layer-icon data">&#9636;</div>
+            <div class="layer-info">
+              <h4>Data Pipeline</h4>
+              <p>Edge-first con sync opcional &mdash; 100% operativo offline</p>
+            </div>
+          </div>
+        </div>
+        <div class="tech-specs reveal">
+          <h3>Especificaciones</h3>
+          <div class="spec-row">
+            <span class="spec-label">Latencia de coordinacion</span>
+            <span class="spec-value">&lt; 50ms</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Drones por enjambre</span>
+            <span class="spec-value">Hasta 256</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Rango mesh</span>
+            <span class="spec-value">2km dron-a-dron</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Modelo ML on-device</span>
+            <span class="spec-value">&lt; 1MB</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Uptime sin cloud</span>
+            <span class="spec-value">100%</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Cobertura por mision</span>
+            <span class="spec-value">500+ hectareas</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Protocolo</span>
+            <span class="spec-value">Open Source (MIT)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="cta">
+    <div class="cta-content">
+      <div class="section-label reveal">Unete</div>
+      <h2 class="reveal reveal-delay-1">El futuro de la<br>agricultura <span style="color:var(--green)">vuela en enjambre.</span></h2>
+      <p class="reveal reveal-delay-2">
+        Construimos el protocolo abierto que democratiza la agricultura de precision para toda Latinoamerica.
+      </p>
+      <div class="cta-buttons reveal reveal-delay-3">
+        <a href="https://dorahacks.io" class="btn-primary" target="_blank">Apoyar en DoraHacks &#8594;</a>
+        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank">Contribuir &#8599;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-left">
+        <strong>Enjambre</strong> &mdash; The Vertex Swarm Challenge 2026
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/enjambre-swarm" target="_blank">GitHub</a>
+        <a href="https://dorahacks.io" target="_blank">DoraHacks</a>
+        <a href="#">Docs</a>
+        <a href="#">Twitter</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ── HAMBURGER ──
+    document.getElementById('hamburger').addEventListener('click', () => {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+
+    // ── SCROLL REVEAL ──
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ── FIELD GRID ──
+    const fieldGrid = document.getElementById('fieldGrid');
+    if (fieldGrid) {
+      for (let i = 0; i < 64; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'field-cell';
+        const hue = Math.random() > 0.3
+          ? `hsl(${130 + Math.random() * 30}, ${50 + Math.random() * 30}%, ${15 + Math.random() * 25}%)`
+          : `hsl(${35 + Math.random() * 15}, ${40 + Math.random() * 20}%, ${20 + Math.random() * 15}%)`;
+        cell.style.background = hue;
+        cell.style.animationDelay = `${Math.random() * 4}s`;
+        fieldGrid.appendChild(cell);
+      }
+    }
+
+    // ── HERO SWARM CANVAS ──
+    (function heroSwarm() {
+      const canvas = document.getElementById('swarm-canvas');
+      const ctx = canvas.getContext('2d');
+      let width, height, particles, mouse;
+
+      function resize() {
+        width = canvas.width = canvas.offsetWidth;
+        height = canvas.height = canvas.offsetHeight;
+      }
+
+      mouse = { x: width / 2, y: height / 2 };
+
+      window.addEventListener('resize', resize);
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+      });
+
+      class Particle {
+        constructor() {
+          this.reset();
+        }
+        reset() {
+          this.x = Math.random() * width;
+          this.y = Math.random() * height;
+          this.vx = (Math.random() - 0.5) * 0.8;
+          this.vy = (Math.random() - 0.5) * 0.8;
+          this.size = 1.5 + Math.random() * 2;
+          this.alpha = 0.2 + Math.random() * 0.5;
+          this.isGreen = Math.random() > 0.4;
+        }
+        update() {
+          // Slight attraction to center swarm point
+          const cx = width / 2 + Math.sin(Date.now() * 0.0003) * 200;
+          const cy = height / 2 + Math.cos(Date.now() * 0.0004) * 100;
+          const dx = cx - this.x;
+          const dy = cy - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist > 1) {
+            this.vx += (dx / dist) * 0.02;
+            this.vy += (dy / dist) * 0.02;
+          }
+
+          // Mouse repulsion
+          const mdx = this.x - mouse.x;
+          const mdy = this.y - mouse.y;
+          const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+          if (mDist < 150 && mDist > 0) {
+            this.vx += (mdx / mDist) * 0.5;
+            this.vy += (mdy / mDist) * 0.5;
+          }
+
+          // Damping
+          this.vx *= 0.98;
+          this.vy *= 0.98;
+
+          this.x += this.vx;
+          this.y += this.vy;
+
+          if (this.x < 0 || this.x > width) this.vx *= -1;
+          if (this.y < 0 || this.y > height) this.vy *= -1;
+        }
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          const color = this.isGreen ? `rgba(0,210,106,${this.alpha})` : `rgba(200,169,110,${this.alpha * 0.6})`;
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+      }
+
+      function init() {
+        resize();
+        const count = Math.min(Math.floor((width * height) / 6000), 200);
+        particles = [];
+        for (let i = 0; i < count; i++) {
+          particles.push(new Particle());
+        }
+      }
+
+      function drawConnections() {
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 100) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              const alpha = (1 - dist / 100) * 0.15;
+              ctx.strokeStyle = `rgba(0,210,106,${alpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        drawConnections();
+        requestAnimationFrame(animate);
+      }
+
+      init();
+      animate();
+    })();
+
+    // ── SWARM DEMO CANVAS ──
+    (function swarmDemo() {
+      const canvas = document.getElementById('swarm-demo');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        const rect = canvas.parentElement ? canvas : canvas;
+        w = canvas.width = canvas.offsetWidth;
+        h = canvas.height = canvas.offsetHeight;
+      }
+
+      resize();
+      window.addEventListener('resize', resize);
+
+      const drones = [];
+      const DRONE_COUNT = 24;
+      const FIELD_ROWS = 4;
+      const FIELD_COLS = 6;
+
+      // Assign drones to grid zones
+      for (let i = 0; i < DRONE_COUNT; i++) {
+        const zoneCol = i % FIELD_COLS;
+        const zoneRow = Math.floor(i / FIELD_COLS) % FIELD_ROWS;
+        drones.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          targetX: 0,
+          targetY: 0,
+          zone: { row: zoneRow, col: zoneCol },
+          speed: 1.5 + Math.random() * 1,
+          phase: Math.random() * Math.PI * 2,
+          scanning: Math.random() > 0.5,
+          trail: []
+        });
+      }
+
+      let mode = 'scatter';
+      let modeTimer = 0;
+      const modes = ['scatter', 'grid', 'sweep', 'converge', 'grid'];
+      let modeIndex = 0;
+
+      function updateTargets() {
+        modeTimer++;
+        if (modeTimer > 300) {
+          modeTimer = 0;
+          modeIndex = (modeIndex + 1) % modes.length;
+          mode = modes[modeIndex];
+        }
+
+        const margin = 60;
+        const usableW = w - margin * 2;
+        const usableH = h - margin * 2;
+
+        drones.forEach((d, i) => {
+          const t = Date.now() * 0.001;
+
+          if (mode === 'scatter') {
+            d.targetX = margin + (d.zone.col + 0.5) / FIELD_COLS * usableW + Math.sin(t + d.phase) * 30;
+            d.targetY = margin + (d.zone.row + 0.5) / FIELD_ROWS * usableH + Math.cos(t + d.phase) * 30;
+          } else if (mode === 'grid') {
+            const cols = 6;
+            const rows = 4;
+            const col = i % cols;
+            const row = Math.floor(i / cols) % rows;
+            d.targetX = margin + (col + 0.5) / cols * usableW;
+            d.targetY = margin + (row + 0.5) / rows * usableH;
+          } else if (mode === 'sweep') {
+            const sweepX = margin + ((t * 30 + i * 15) % usableW);
+            const row = Math.floor(i / 6);
+            d.targetX = sweepX;
+            d.targetY = margin + (row + 0.5) / FIELD_ROWS * usableH;
+          } else if (mode === 'converge') {
+            const angle = (i / DRONE_COUNT) * Math.PI * 2 + t * 0.5;
+            const radius = 80 + Math.sin(t * 2 + i) * 20;
+            d.targetX = w / 2 + Math.cos(angle) * radius;
+            d.targetY = h / 2 + Math.sin(angle) * radius;
+          }
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw field grid lines
+        ctx.strokeStyle = 'rgba(48,54,61,0.3)';
+        ctx.lineWidth = 1;
+        const margin = 60;
+        for (let i = 0; i <= FIELD_COLS; i++) {
+          const x = margin + (i / FIELD_COLS) * (w - margin * 2);
+          ctx.beginPath();
+          ctx.moveTo(x, margin);
+          ctx.lineTo(x, h - margin);
+          ctx.stroke();
+        }
+        for (let i = 0; i <= FIELD_ROWS; i++) {
+          const y = margin + (i / FIELD_ROWS) * (h - margin * 2);
+          ctx.beginPath();
+          ctx.moveTo(margin, y);
+          ctx.lineTo(w - margin, y);
+          ctx.stroke();
+        }
+
+        updateTargets();
+
+        // Draw connections
+        for (let i = 0; i < drones.length; i++) {
+          for (let j = i + 1; j < drones.length; j++) {
+            const dx = drones[i].x - drones[j].x;
+            const dy = drones[i].y - drones[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              ctx.beginPath();
+              ctx.moveTo(drones[i].x, drones[i].y);
+              ctx.lineTo(drones[j].x, drones[j].y);
+              ctx.strokeStyle = `rgba(0,210,106,${(1 - dist / 120) * 0.25})`;
+              ctx.lineWidth = 0.8;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Update and draw drones
+        drones.forEach((d) => {
+          const dx = d.targetX - d.x;
+          const dy = d.targetY - d.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist > 1) {
+            d.x += (dx / dist) * d.speed;
+            d.y += (dy / dist) * d.speed;
+          }
+
+          // Trail
+          d.trail.push({ x: d.x, y: d.y });
+          if (d.trail.length > 12) d.trail.shift();
+
+          // Draw trail
+          d.trail.forEach((p, idx) => {
+            const a = (idx / d.trail.length) * 0.15;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0,210,106,${a})`;
+            ctx.fill();
+          });
+
+          // Draw drone body
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#00d26a';
+          ctx.fill();
+
+          // Glow
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, 10, 0, Math.PI * 2);
+          const grad = ctx.createRadialGradient(d.x, d.y, 2, d.x, d.y, 10);
+          grad.addColorStop(0, 'rgba(0,210,106,0.2)');
+          grad.addColorStop(1, 'rgba(0,210,106,0)');
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          // Scanning ring
+          if (d.scanning) {
+            const ringRadius = 15 + Math.sin(Date.now() * 0.005 + d.phase) * 5;
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, ringRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0,210,106,0.1)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
+
+        // Mode label
+        const labels = {
+          scatter: 'RECONOCIMIENTO',
+          grid: 'FORMACION',
+          sweep: 'BARRIDO',
+          converge: 'CONVERGENCIA'
+        };
+        ctx.fillStyle = 'rgba(0,210,106,0.6)';
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.letterSpacing = '2px';
+        ctx.fillText(labels[mode] || mode.toUpperCase(), margin, h - 30);
+
+        // Drone count
+        ctx.fillStyle = 'rgba(139,148,158,0.5)';
+        ctx.font = '500 11px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${DRONE_COUNT} NODOS ACTIVOS`, w - margin, h - 30);
+        ctx.textAlign = 'left';
+
+        requestAnimationFrame(draw);
+      }
+
+      draw();
+    })();
+
+    // ── CASE CARD MINI CANVASES ──
+    document.querySelectorAll('.case-canvas').forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      const caseType = canvas.dataset.case;
+
+      function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const dots = [];
+      for (let i = 0; i < 20; i++) {
+        dots.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: (Math.random() - 0.5) * 1.2,
+          size: 2 + Math.random() * 2
+        });
+      }
+
+      const colors = {
+        agri: { dot: '#00d26a', line: 'rgba(0,210,106,' },
+        logistics: { dot: '#a371f7', line: 'rgba(163,113,247,' },
+        rescue: { dot: '#c8a96e', line: 'rgba(200,169,110,' }
+      };
+      const color = colors[caseType] || colors.agri;
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        dots.forEach(d => {
+          d.x += d.vx;
+          d.y += d.vy;
+          if (d.x < 0 || d.x > canvas.width) d.vx *= -1;
+          if (d.y < 0 || d.y > canvas.height) d.vy *= -1;
+
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+          ctx.fillStyle = color.dot;
+          ctx.fill();
+        });
+
+        for (let i = 0; i < dots.length; i++) {
+          for (let j = i + 1; j < dots.length; j++) {
+            const dx = dots[i].x - dots[j].x;
+            const dy = dots[i].y - dots[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 80) {
+              ctx.beginPath();
+              ctx.moveTo(dots[i].x, dots[i].y);
+              ctx.lineTo(dots[j].x, dots[j].y);
+              ctx.strokeStyle = color.line + (1 - dist / 80) * 0.3 + ')';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+      animate();
+    });
+
+    // ── SMOOTH SCROLL FOR NAV ──
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('navLinks').classList.remove('open');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

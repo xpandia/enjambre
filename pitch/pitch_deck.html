@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enjambre — Coordina. Cultiva. Conquista.</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--dark:#0d1117;--dark2:#161b22;--dark3:#21262d;
+--green:#00d26a;--green-glow:rgba(0,210,106,.15);--green-dim:#00a854;
+--earth:#c8a96e;--earth-dim:#a08550;--earth-light:#e0c99a;
+--white:#f0f6fc;--gray:#8b949e;--gray2:#484f58;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--white);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+
+/* ─── SLIDE CONTAINER ─── */
+.deck{position:relative;width:100%;height:100%}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;padding:4vw 6vw;
+  opacity:0;transform:scale(.97);pointer-events:none;
+  transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1);
+  z-index:0;
+}
+.slide.active{opacity:1;transform:scale(1);pointer-events:auto;z-index:2}
+.slide.prev{opacity:0;transform:scale(1.03)}
+
+/* ─── PROGRESS BAR ─── */
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--green),var(--earth));z-index:100;transition:width .5s ease}
+
+/* ─── SLIDE NUMBER ─── */
+#slideNum{position:fixed;bottom:2vh;right:3vw;font-size:.85rem;color:var(--gray2);z-index:100;font-variant-numeric:tabular-nums}
+
+/* ─── SPEAKER NOTES PANEL ─── */
+#notesPanel{
+  position:fixed;bottom:0;left:0;right:0;height:0;overflow:hidden;
+  background:rgba(0,0,0,.92);border-top:1px solid var(--dark3);
+  z-index:200;transition:height .35s ease;padding:0 4vw;
+  font-size:.9rem;color:var(--gray);line-height:1.7;
+}
+#notesPanel.open{height:22vh;padding:2vh 4vw}
+#notesPanel p{max-width:900px}
+
+/* ─── TYPOGRAPHY ─── */
+.slide h1{font-size:clamp(2.8rem,5.5vw,5.5rem);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:1rem}
+.slide h2{font-size:clamp(2rem,4vw,4rem);font-weight:700;line-height:1.1;letter-spacing:-.025em;margin-bottom:.75rem}
+.slide h3{font-size:clamp(1.2rem,2vw,2rem);font-weight:500;color:var(--gray);margin-bottom:1.5rem}
+.slide p,.slide li{font-size:clamp(.95rem,1.3vw,1.3rem);line-height:1.6;color:var(--gray);max-width:820px}
+.slide blockquote{
+  font-size:clamp(1.4rem,2.8vw,2.8rem);font-weight:300;font-style:italic;
+  line-height:1.4;max-width:900px;text-align:center;color:var(--white);
+  border:none;padding:0;
+}
+.accent{color:var(--green)}
+.earth{color:var(--earth)}
+.tag{display:inline-block;padding:.25em .7em;border-radius:99px;font-size:.8rem;font-weight:600;margin:.2em}
+.tag-green{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,210,106,.25)}
+.tag-earth{background:rgba(200,169,110,.12);color:var(--earth);border:1px solid rgba(200,169,110,.25)}
+.small{font-size:.85rem;color:var(--gray2)}
+.stat-row{display:flex;gap:3vw;flex-wrap:wrap;justify-content:center;margin-top:2rem}
+.stat{text-align:center}
+.stat .num{font-size:clamp(2.5rem,4.5vw,4.5rem);font-weight:800;font-variant-numeric:tabular-nums}
+.stat .label{font-size:.9rem;color:var(--gray);margin-top:.3rem}
+
+/* ─── CARDS ─── */
+.card-grid{display:grid;gap:1.5rem;margin-top:2rem;width:100%;max-width:1100px}
+.card-grid.cols-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card-grid.cols-2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{
+  background:var(--dark2);border:1px solid var(--dark3);border-radius:16px;
+  padding:1.8rem;text-align:left;transition:border-color .3s,transform .3s;
+}
+.card:hover{border-color:var(--green);transform:translateY(-4px)}
+.card h4{font-size:1.1rem;font-weight:700;margin-bottom:.5rem;color:var(--white)}
+.card p{font-size:.9rem;color:var(--gray);line-height:1.5}
+.card .icon{font-size:1.8rem;margin-bottom:.7rem;display:block}
+
+/* ─── TAM / SAM / SOM ─── */
+.tam-visual{display:flex;align-items:center;justify-content:center;gap:0;margin-top:2rem;position:relative;height:340px;width:100%;max-width:600px}
+.tam-circle{
+  border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:absolute;transition:transform .5s ease;
+}
+.tam-circle.tam{width:320px;height:320px;border:2px solid var(--green-dim);background:rgba(0,210,106,.04)}
+.tam-circle.sam{width:220px;height:220px;border:2px solid var(--earth-dim);background:rgba(200,169,110,.06)}
+.tam-circle.som{width:120px;height:120px;border:2px solid var(--green);background:var(--green-glow)}
+.tam-circle .val{font-size:1.4rem;font-weight:800;color:var(--white)}
+.tam-circle .lbl{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)}
+.tam-labels{margin-left:2rem;text-align:left}
+.tam-labels div{margin-bottom:1rem}
+.tam-labels .ll{font-weight:700;font-size:1rem}
+.tam-labels .ld{font-size:.8rem;color:var(--gray)}
+.tam-wrapper{display:flex;align-items:center;justify-content:center;gap:3vw;flex-wrap:wrap;width:100%;max-width:900px}
+
+/* ─── DRONE FORMATION ─── */
+.drone-canvas{position:relative;width:100%;max-width:700px;height:300px;margin:1.5rem auto 0}
+.drone-dot{
+  position:absolute;width:10px;height:10px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 12px var(--green),0 0 30px rgba(0,210,106,.3);
+  transition:all 1.5s cubic-bezier(.4,0,.2,1);
+}
+.drone-dot::after{
+  content:'';position:absolute;top:50%;left:50%;width:40px;height:40px;
+  border:1px solid rgba(0,210,106,.15);border-radius:50%;
+  transform:translate(-50%,-50%);animation:pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) scale(2);opacity:0}}
+.drone-line{position:absolute;height:1px;background:rgba(0,210,106,.12);transform-origin:left center;transition:all 1.5s ease}
+
+/* ─── PRICING TABLE ─── */
+.price-table{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-top:2rem;width:100%;max-width:900px}
+.price-card{
+  background:var(--dark2);border:1px solid var(--dark3);border-radius:16px;
+  padding:2rem 1.5rem;text-align:center;position:relative;overflow:hidden;
+  transition:border-color .3s,transform .3s;
+}
+.price-card.featured{border-color:var(--green)}
+.price-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)}
+.price-card .tier{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:.5rem}
+.price-card .price{font-size:2.2rem;font-weight:800;margin-bottom:.3rem}
+.price-card .period{font-size:.8rem;color:var(--gray);margin-bottom:1rem}
+.price-card ul{list-style:none;text-align:left}
+.price-card li{font-size:.82rem;color:var(--gray);padding:.35rem 0;border-bottom:1px solid var(--dark3)}
+.price-card li::before{content:'✓ ';color:var(--green);font-weight:700}
+
+/* ─── TEAM ─── */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-top:2rem;width:100%;max-width:1000px}
+.team-card{text-align:center;padding:1.5rem}
+.team-card .avatar{
+  width:70px;height:70px;border-radius:50%;margin:0 auto 1rem;
+  background:linear-gradient(135deg,var(--green),var(--earth));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:800;color:var(--dark);
+}
+.team-card .name{font-weight:700;font-size:1rem}
+.team-card .role{font-size:.8rem;color:var(--green);font-weight:600;margin:.3rem 0}
+.team-card .bio{font-size:.75rem;color:var(--gray);line-height:1.4}
+
+/* ─── FUND ALLOCATION BAR ─── */
+.fund-bar{width:100%;max-width:800px;height:40px;border-radius:20px;overflow:hidden;display:flex;margin:1.5rem 0}
+.fund-seg{display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--dark);transition:flex-basis 1s ease}
+.fund-legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:1rem;justify-content:center}
+.fund-legend span{font-size:.8rem;display:flex;align-items:center;gap:.4rem}
+.fund-legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* ─── MILESTONE LIST ─── */
+.milestones{list-style:none;margin-top:1.5rem;max-width:700px;width:100%}
+.milestones li{
+  display:flex;align-items:center;gap:1rem;padding:.8rem 0;
+  border-bottom:1px solid var(--dark3);font-size:1rem;
+}
+.milestones .ml-icon{width:36px;height:36px;border-radius:50%;background:var(--green-glow);border:1px solid rgba(0,210,106,.3);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+
+/* ─── TRACTION ─── */
+.traction-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.2rem;margin-top:2rem;width:100%;max-width:900px}
+.traction-card{background:var(--dark2);border:1px solid var(--dark3);border-radius:12px;padding:1.5rem;text-align:center}
+.traction-card .tv{font-size:2rem;font-weight:800;color:var(--green)}
+.traction-card .tl{font-size:.8rem;color:var(--gray);margin-top:.3rem}
+
+/* ─── COMPETITOR TABLE ─── */
+.comp-table{width:100%;max-width:950px;margin-top:1.5rem;border-collapse:collapse}
+.comp-table th,.comp-table td{padding:.6rem .8rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--dark3)}
+.comp-table th{font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;font-size:.68rem}
+.comp-table tr:first-child td{color:var(--green);font-weight:700}
+.comp-table td:first-child{text-align:left;font-weight:600;color:var(--white)}
+.comp-table .yes{color:var(--green)}
+.comp-table .no{color:var(--gray2)}
+
+/* ─── BACKGROUND GRID ─── */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,210,106,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,210,106,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+.bg-glow{
+  position:fixed;width:600px;height:600px;border-radius:50%;
+  filter:blur(160px);opacity:.12;z-index:0;pointer-events:none;
+}
+.bg-glow.g1{background:var(--green);top:-200px;right:-100px}
+.bg-glow.g2{background:var(--earth);bottom:-200px;left:-100px}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  .slide{padding:6vw 5vw}
+  .tam-circle.tam{width:220px;height:220px}
+  .tam-circle.sam{width:150px;height:150px}
+  .tam-circle.som{width:90px;height:90px}
+  .comp-table{font-size:.65rem}
+  .comp-table th,.comp-table td{padding:.4rem .3rem}
+}
+@media(max-width:480px){
+  .stat .num{font-size:2rem}
+  .team-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.slide.active .anim{animation:fadeUp .7s ease forwards}
+.slide.active .anim-d1{animation-delay:.15s;opacity:0}
+.slide.active .anim-d2{animation-delay:.3s;opacity:0}
+.slide.active .anim-d3{animation-delay:.45s;opacity:0}
+.slide.active .anim-d4{animation-delay:.6s;opacity:0}
+.slide.active .anim-d5{animation-delay:.75s;opacity:0}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow g1"></div>
+<div class="bg-glow g2"></div>
+<div id="progress" style="width:0%"></div>
+<div id="slideNum">1 / 12</div>
+<div id="notesPanel"><p id="notesText"></p></div>
+
+<div class="deck" id="deck">
+
+<!-- ═══ SLIDE 1 — THE OPENING ═══ -->
+<div class="slide active" data-notes="Open with silence. Let the number land. $65 billion — that's not a projection, that's today's reality. Pause after the quote.">
+  <h3 class="anim" style="color:var(--green);font-weight:700;letter-spacing:.15em;text-transform:uppercase;font-size:clamp(.7rem,1vw,.9rem);margin-bottom:2rem">The Vertex Swarm Challenge 2026</h3>
+  <h1 class="anim anim-d1" style="margin-bottom:2rem">Enjambre</h1>
+  <p class="anim anim-d2" style="font-size:clamp(1.1rem,1.6vw,1.6rem);color:var(--earth);font-weight:500;letter-spacing:.05em;margin-bottom:3rem">Coordina. Cultiva. Conquista.</p>
+  <blockquote class="anim anim-d3" style="font-size:clamp(1.1rem,1.8vw,1.7rem);max-width:750px">"Every year, <span class="accent">$65 billion</span> vanish from Latin American farms. Not stolen. Not lost. <em>Wasted.</em>"</blockquote>
+</div>
+
+<!-- ═══ SLIDE 2 — THE PROBLEM ═══ -->
+<div class="slide" data-notes="Emphasize that the technology exists but the architecture is wrong. Designed for Iowa, not Oaxaca. 70% of farms rely on manual scouting. Under 15% of rural areas have broadband.">
+  <h2 class="anim">Agriculture in LATAM<br>is <span class="accent">broken</span>.</h2>
+  <div class="stat-row anim anim-d1">
+    <div class="stat"><div class="num accent" data-count="130">0</div><div class="label">Million hectares<br>of arable land</div></div>
+    <div class="stat"><div class="num earth" data-count="70" data-suffix="%">0</div><div class="label">Farms rely on<br>manual scouting</div></div>
+    <div class="stat"><div class="num" style="color:var(--white)" data-prefix="$" data-count="65" data-suffix="B">0</div><div class="label">Annual crop losses<br>from inefficiency</div></div>
+    <div class="stat"><div class="num accent" data-count="15" data-suffix="%" data-prefix="<">0</div><div class="label">Rural broadband<br>connectivity</div></div>
+  </div>
+  <p class="anim anim-d2" style="text-align:center;margin-top:2rem;font-weight:500;color:var(--white)">The problem is not technology.<br>The problem is <span class="accent">architecture</span>.</p>
+</div>
+
+<!-- ═══ SLIDE 3 — THE INSIGHT ═══ -->
+<div class="slide" data-notes="This is the 'aha' moment. One drone is a tool. A swarm is a revolution. Nature solved coordination millions of years ago. Let the drone formation animation play.">
+  <blockquote class="anim" style="margin-bottom:2.5rem">"One drone is a tool.<br>A thousand drones thinking together —<br>that is a <span class="accent">revolution</span>."</blockquote>
+  <div class="drone-canvas anim anim-d1" id="droneFormation"></div>
+  <p class="anim anim-d2" style="text-align:center;margin-top:1.5rem">Decentralized. Autonomous. Adaptive.<br><span class="accent">Local intelligence</span>, global impact.</p>
+</div>
+
+<!-- ═══ SLIDE 4 — THE SOLUTION ═══ -->
+<div class="slide" data-notes="Three layers, one mission. SwarmOS is the coordination brain. CultivaAI is the eyes. FleetCloud is the interface. No base station, no single point of failure, no PhD required.">
+  <h2 class="anim">Three layers.<br>One <span class="accent">mission</span>.</h2>
+  <div class="card-grid cols-3 anim anim-d1">
+    <div class="card">
+      <span class="icon">🧠</span>
+      <h4>SwarmOS</h4>
+      <p>Real-time coordination protocol. Drones negotiate tasks, share data, adapt routes — zero central server.</p>
+    </div>
+    <div class="card">
+      <span class="icon">👁️</span>
+      <h4>CultivaAI</h4>
+      <p>On-device computer vision. Pests, disease, water stress, nutrient deficiency — detected at the leaf level.</p>
+    </div>
+    <div class="card">
+      <span class="icon">📡</span>
+      <h4>FleetCloud</h4>
+      <p>SaaS dashboard for fleet owners. Mission planning, analytics, compliance, ROI tracking.</p>
+    </div>
+  </div>
+  <p class="anim anim-d2 small" style="margin-top:1.5rem;text-align:center">No base station. No single point of failure. No PhD required.</p>
+</div>
+
+<!-- ═══ SLIDE 5 — THE DEMO / TECHNOLOGY ═══ -->
+<div class="slide" data-notes="Walk through the demo: 500 hectares, 12 drones, one button press. Voronoi partitioning, convergence on blight detection. 47 minutes vs 3 days manual. Then hit the technical differentiators.">
+  <h2 class="anim" style="font-size:clamp(1.5rem,3vw,2.8rem)">Press <span class="accent">one button</span>.</h2>
+  <h3 class="anim anim-d1" style="color:var(--earth)">The swarm self-organizes.</h3>
+  <div class="stat-row anim anim-d2">
+    <div class="stat"><div class="num accent" data-count="12">0</div><div class="label">Drones deployed</div></div>
+    <div class="stat"><div class="num earth" data-count="500">0</div><div class="label">Hectares scanned</div></div>
+    <div class="stat"><div class="num accent" data-count="47">0</div><div class="label">Minutes total</div></div>
+    <div class="stat"><div class="num" style="color:var(--white)" data-count="3">0</div><div class="label">Days manual<br>equivalent</div></div>
+  </div>
+  <div class="card-grid cols-2 anim anim-d3" style="margin-top:2rem;max-width:900px">
+    <div class="card"><h4><span class="accent">●</span> Mesh Protocol</h4><p>Ad-hoc P2P network — no WiFi, no cell towers. Works in the most remote farmland.</p></div>
+    <div class="card"><h4><span class="accent">●</span> Edge-First AI</h4><p>NVIDIA Jetson Orin Nano. 12 fps at 4K. No cloud dependency during flight.</p></div>
+    <div class="card"><h4><span class="accent">●</span> Consensus Routing</h4><p>Ant-colony optimization. Drones vote in real-time. Redistribution in &lt;8 seconds.</p></div>
+    <div class="card"><h4><span class="accent">●</span> Energy-Aware</h4><p>Battery is a first-class variable. The swarm knows when to return, push, or hand off.</p></div>
+  </div>
+</div>
+
+<!-- ═══ SLIDE 6 — COMPETITIVE MOAT ═══ -->
+<div class="slide" data-notes="No competitor has built production-grade swarm coordination that works offline. 2-3 year engineering head start. Deep moat across embedded systems, TinyML, and P2P networking.">
+  <h2 class="anim">Works where<br><span class="accent">nothing else can</span>.</h2>
+  <table class="comp-table anim anim-d1">
+    <tr><th></th><th>Connectivity</th><th>Swarm</th><th>LATAM</th><th>Offline</th><th>$/Acre</th></tr>
+    <tr><td>Enjambre</td><td class="yes">None needed</td><td class="yes">10+ drones</td><td class="yes">Core</td><td class="yes">Yes</td><td class="yes">$3-5</td></tr>
+    <tr><td>DJI Agras</td><td>4G/WiFi</td><td class="no">No</td><td class="no">No</td><td class="no">Partial</td><td>$12-18</td></tr>
+    <tr><td>PrecisionHawk</td><td>Cloud</td><td class="no">No</td><td class="no">No</td><td class="no">$15-25</td></tr>
+    <tr><td>XAG</td><td>4G/RTK</td><td class="no">Limited</td><td class="no">No</td><td class="no">$8-15</td></tr>
+    <tr><td>Sentera</td><td>Cloud</td><td class="no">No</td><td class="no">No</td><td class="no">$10-20</td></tr>
+  </table>
+  <p class="anim anim-d2 small" style="margin-top:1.5rem;text-align:center">Patent-pending swarm consensus algorithm. Built on ROS 2 + custom middleware.</p>
+</div>
+
+<!-- ═══ SLIDE 7 — MARKET (TAM/SAM/SOM) ═══ -->
+<div class="slide" data-notes="TAM $12.8B global precision ag drones by 2028. SAM $3.2B for LATAM. SOM $160M by Year 5. Adjacent markets in reforestation ($2.1B), insurance ($4B), disaster response ($1.5B).">
+  <h2 class="anim">The <span class="accent">market</span>.</h2>
+  <div class="tam-wrapper anim anim-d1">
+    <div class="tam-visual">
+      <div class="tam-circle tam"><span class="val" data-count="12.8" data-prefix="$" data-suffix="B" data-decimals="1">$0</span><span class="lbl">TAM</span></div>
+      <div class="tam-circle sam"><span class="val" data-count="3.2" data-prefix="$" data-suffix="B" data-decimals="1">$0</span><span class="lbl">SAM</span></div>
+      <div class="tam-circle som"><span class="val" data-count="160" data-prefix="$" data-suffix="M">$0</span><span class="lbl">SOM</span></div>
+    </div>
+    <div class="tam-labels">
+      <div><div class="ll accent">$12.8B TAM</div><div class="ld">Global precision ag<br>drone services (2028)</div></div>
+      <div><div class="ll earth">$3.2B SAM</div><div class="ld">LATAM precision ag<br>drone services</div></div>
+      <div><div class="ll" style="color:var(--white)">$160M SOM</div><div class="ld">5% of SAM by Year 5<br>~32M acres</div></div>
+    </div>
+  </div>
+  <div class="stat-row anim anim-d2" style="margin-top:1.5rem;gap:2vw">
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--earth)" data-prefix="$" data-count="2.1" data-suffix="B" data-decimals="1">0</div><div class="label small">Reforestation</div></div>
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--earth)" data-prefix="$" data-count="4" data-suffix="B">0</div><div class="label small">Ag Insurance</div></div>
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--earth)" data-prefix="$" data-count="1.5" data-suffix="B" data-decimals="1">0</div><div class="label small">Disaster Response</div></div>
+  </div>
+</div>
+
+<!-- ═══ SLIDE 8 — BUSINESS MODEL ═══ -->
+<div class="slide" data-notes="We don't sell drones, we sell intelligence. SaaS per-fleet pricing. Semilla $499/mo, Cosecha $1,499/mo, Hacienda $4,999/mo. Additional revenue from overages, model marketplace, data licensing. LTV/CAC 31.7x.">
+  <h2 class="anim">We don't sell drones.<br>We sell <span class="accent">intelligence</span>.</h2>
+  <div class="price-table anim anim-d1">
+    <div class="price-card">
+      <div class="tier">Semilla</div>
+      <div class="price">$499</div>
+      <div class="period">/month · up to 5 drones</div>
+      <ul>
+        <li>SwarmOS core</li>
+        <li>CultivaAI basic</li>
+        <li>10K hectares/month</li>
+      </ul>
+    </div>
+    <div class="price-card featured">
+      <div class="tier">Cosecha</div>
+      <div class="price">$1,499</div>
+      <div class="period">/month · up to 20 drones</div>
+      <ul>
+        <li>Full platform</li>
+        <li>Priority support</li>
+        <li>API access</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <div class="tier">Hacienda</div>
+      <div class="price">$4,999</div>
+      <div class="period">/month · unlimited</div>
+      <ul>
+        <li>White-label</li>
+        <li>Custom models</li>
+        <li>Dedicated success mgr</li>
+      </ul>
+    </div>
+  </div>
+  <div class="stat-row anim anim-d2" style="margin-top:1.5rem">
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--green)">82%</div><div class="label small">Gross margin</div></div>
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--white)">31.7x</div><div class="label small">LTV / CAC</div></div>
+    <div class="stat"><div class="num" style="font-size:1.6rem;color:var(--earth)">130%</div><div class="label small">Net retention</div></div>
+  </div>
+</div>
+
+<!-- ═══ SLIDE 9 — TRACTION ═══ -->
+<div class="slide" data-notes="Not a dream, it's momentum. 3 pilots running in Jalisco, Minas Gerais, Valle del Cauca. 14K hectares scanned. 23% pesticide reduction. $1.2M in LOIs. NPS 78. Partnerships with DJI, Syngenta, CAF.">
+  <h2 class="anim">Not a dream.<br><span class="accent">Momentum</span>.</h2>
+  <div class="traction-grid anim anim-d1">
+    <div class="traction-card"><div class="tv" data-count="3">0</div><div class="tl">Active pilots<br><span class="small">MX · BR · CO</span></div></div>
+    <div class="traction-card"><div class="tv" data-count="14" data-suffix="K" style="color:var(--white)">0</div><div class="tl">Hectares scanned</div></div>
+    <div class="traction-card"><div class="tv" data-count="23" data-suffix="%">0</div><div class="tl">Pesticide<br>reduction</div></div>
+    <div class="traction-card"><div class="tv" data-prefix="$" data-count="1.2" data-suffix="M" data-decimals="1" style="color:var(--earth)">0</div><div class="tl">Letters of intent</div></div>
+    <div class="traction-card"><div class="tv" data-count="78">0</div><div class="tl">NPS score</div></div>
+  </div>
+  <div style="display:flex;gap:1rem;margin-top:2rem;flex-wrap:wrap;justify-content:center" class="anim anim-d2">
+    <span class="tag tag-green">DJI Enterprise</span>
+    <span class="tag tag-green">Syngenta LATAM</span>
+    <span class="tag tag-earth">CAF Development Bank</span>
+    <span class="tag tag-earth">EMBRAPA</span>
+  </div>
+</div>
+
+<!-- ═══ SLIDE 10 — TEAM ═══ -->
+<div class="slide" data-notes="Not tourists in agriculture. CEO: 8 years ag-tech, born on a farm. CTO: Robotics PhD, 11 papers on multi-agent coordination. Head of AI: CV lead, 50K+ devices. Head of Growth: $0 to $8M ARR in LATAM.">
+  <h2 class="anim">We know the <span class="earth">dirt</span>.</h2>
+  <div class="team-grid anim anim-d1">
+    <div class="team-card">
+      <div class="avatar">CEO</div>
+      <div class="name">Founder 1</div>
+      <div class="role">CEO</div>
+      <div class="bio">8 years in ag-tech. Led drone ops. Born on a farm in Antioquia.</div>
+    </div>
+    <div class="team-card">
+      <div class="avatar">CTO</div>
+      <div class="name">Founder 2</div>
+      <div class="role">CTO</div>
+      <div class="bio">Robotics PhD. 11 papers on multi-agent coordination.</div>
+    </div>
+    <div class="team-card">
+      <div class="avatar">AI</div>
+      <div class="name">Founder 3</div>
+      <div class="role">Head of AI</div>
+      <div class="bio">CV lead at top tech co. Models deployed on 50K+ devices.</div>
+    </div>
+    <div class="team-card">
+      <div class="avatar">GTM</div>
+      <div class="name">Founder 4</div>
+      <div class="role">Head of Growth</div>
+      <div class="bio">Scaled SaaS $0 → $8M ARR in LATAM. Speaks cooperative.</div>
+    </div>
+  </div>
+  <p class="anim anim-d2 small" style="margin-top:1.5rem;text-align:center">Advisors: Former VP DJI Enterprise · Chief Agronomist CIMMYT · LATAM VC Partner</p>
+</div>
+
+<!-- ═══ SLIDE 11 — THE ASK ═══ -->
+<div class="slide" data-notes="Raising $4.5M seed. 35% R&D, 25% hardware, 15% field ops, 15% team, 10% GTM. Milestones: 10+ drone coordination, 30K acres, 95% accuracy TinyML, $200K ARR, Series A readiness.">
+  <h2 class="anim">Raising <span class="accent">$4.5M</span> Seed</h2>
+  <div class="fund-bar anim anim-d1">
+    <div class="fund-seg" style="flex-basis:35%;background:var(--green)">35%</div>
+    <div class="fund-seg" style="flex-basis:25%;background:var(--earth)">25%</div>
+    <div class="fund-seg" style="flex-basis:15%;background:var(--green-dim)">15%</div>
+    <div class="fund-seg" style="flex-basis:15%;background:var(--earth-dim)">15%</div>
+    <div class="fund-seg" style="flex-basis:10%;background:var(--gray2);color:var(--white)">10%</div>
+  </div>
+  <div class="fund-legend anim anim-d2">
+    <span><span class="dot" style="background:var(--green)"></span> R&D — $1.58M</span>
+    <span><span class="dot" style="background:var(--earth)"></span> Hardware — $1.13M</span>
+    <span><span class="dot" style="background:var(--green-dim)"></span> Field Ops — $675K</span>
+    <span><span class="dot" style="background:var(--earth-dim)"></span> Team — $675K</span>
+    <span><span class="dot" style="background:var(--gray2)"></span> GTM — $450K</span>
+  </div>
+  <ul class="milestones anim anim-d3">
+    <li><span class="ml-icon">🎯</span> 10+ drone swarm coordination in production</li>
+    <li><span class="ml-icon">🌾</span> 30,000 acres under management — 5 cooperatives</li>
+    <li><span class="ml-icon">🤖</span> 95%+ accuracy TinyML for top 5 LATAM crops</li>
+    <li><span class="ml-icon">📈</span> $200K ARR → Series A readiness at $18-22M</li>
+  </ul>
+</div>
+
+<!-- ═══ SLIDE 12 — THE CLOSE ═══ -->
+<div class="slide" data-notes="600 million people. Half depend on agriculture. The farms feeding them are losing. Enjambre is the nervous system for the future of farming. We're asking you to bet on the people who feed a continent.">
+  <blockquote class="anim" style="font-size:clamp(1.2rem,2.2vw,2.2rem);max-width:800px;margin-bottom:2rem">"Enjambre is not another drone company.<br>It is the <span class="accent">nervous system</span> for the<br>future of farming."</blockquote>
+  <h1 class="anim anim-d1" style="margin-bottom:.5rem">Enjambre</h1>
+  <p class="anim anim-d2" style="font-size:clamp(1.1rem,1.6vw,1.6rem);color:var(--earth);font-weight:500;letter-spacing:.05em;margin-bottom:2rem">Coordina. Cultiva. Conquista.</p>
+  <blockquote class="anim anim-d3" style="font-size:clamp(1rem,1.4vw,1.4rem);color:var(--gray);font-style:normal;margin-bottom:2rem">"We are not asking you to bet on a technology.<br>We are asking you to bet on the people who <span class="accent">feed a continent</span>."</blockquote>
+  <p class="anim anim-d4 small">enjambre.ag · team@enjambre.ag</p>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+(function(){
+const slides=document.querySelectorAll('.slide');
+const total=slides.length;
+let cur=0;
+const progress=document.getElementById('progress');
+const slideNum=document.getElementById('slideNum');
+const notesPanel=document.getElementById('notesPanel');
+const notesText=document.getElementById('notesText');
+let notesOpen=false;
+
+function go(n){
+  if(n<0||n>=total)return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('prev');
+  setTimeout(()=>slides[cur===n?cur:cur].classList.remove('prev'),700);
+  const prev=cur;
+  cur=n;
+  slides.forEach((s,i)=>{if(i!==cur&&i!==prev)s.classList.remove('active','prev')});
+  setTimeout(()=>{slides[prev].classList.remove('prev')},50);
+  slides[cur].classList.add('active');
+  progress.style.width=((cur/(total-1))*100)+'%';
+  slideNum.textContent=(cur+1)+' / '+total;
+  notesText.textContent=slides[cur].dataset.notes||'';
+  animateCounters(slides[cur]);
+  animateDrones(cur);
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();go(cur+1)}
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();go(cur-1)}
+  else if(e.key==='f'||e.key==='F'){
+    if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+  else if(e.key==='n'||e.key==='N'){
+    notesOpen=!notesOpen;
+    notesPanel.classList.toggle('open',notesOpen);
+  }
+});
+
+// Click navigation
+document.addEventListener('click',e=>{
+  if(e.target.closest('#notesPanel'))return;
+  if(e.clientX>window.innerWidth*.5)go(cur+1);else go(cur-1);
+});
+
+// Touch
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50){dx<0?go(cur+1):go(cur-1)}
+},{passive:true});
+
+// ─── ANIMATED COUNTERS ───
+function animateCounters(slide){
+  slide.querySelectorAll('[data-count]').forEach(el=>{
+    if(el.dataset.animated)return;
+    el.dataset.animated='1';
+    const target=parseFloat(el.dataset.count);
+    const prefix=el.dataset.prefix||'';
+    const suffix=el.dataset.suffix||'';
+    const decimals=parseInt(el.dataset.decimals)||0;
+    const duration=1600;
+    const start=performance.now();
+    function tick(now){
+      const t=Math.min((now-start)/duration,1);
+      const ease=1-Math.pow(1-t,4);
+      const val=(target*ease).toFixed(decimals);
+      el.textContent=prefix+val+suffix;
+      if(t<1)requestAnimationFrame(tick);
+      else el.textContent=prefix+target.toFixed(decimals)+suffix;
+    }
+    setTimeout(()=>requestAnimationFrame(tick),400);
+  });
+}
+
+// ─── DRONE FORMATION ───
+const droneCanvas=document.getElementById('droneFormation');
+const numDrones=12;
+const drones=[];
+const lines=[];
+
+// Create drones
+for(let i=0;i<numDrones;i++){
+  const dot=document.createElement('div');
+  dot.className='drone-dot';
+  droneCanvas.appendChild(dot);
+  drones.push(dot);
+}
+// Create lines between nearby drones
+for(let i=0;i<numDrones;i++){
+  for(let j=i+1;j<numDrones;j++){
+    if(Math.random()<.35){
+      const line=document.createElement('div');
+      line.className='drone-line';
+      droneCanvas.appendChild(line);
+      lines.push({el:line,a:i,b:j});
+    }
+  }
+}
+
+const formations={
+  scatter:()=>drones.map((_,i)=>({x:10+Math.random()*80,y:10+Math.random()*80})),
+  grid:()=>{const pos=[];for(let r=0;r<3;r++)for(let c=0;c<4;c++)pos.push({x:20+c*20,y:20+r*30});return pos},
+  vee:()=>drones.map((_,i)=>{const side=i%2===0?1:-1;const depth=Math.floor(i/2);return{x:50+side*depth*8,y:15+depth*13}}),
+  circle:()=>drones.map((_,i)=>{const a=(i/numDrones)*Math.PI*2;return{x:50+Math.cos(a)*30,y:50+Math.sin(a)*35}})
+};
+const fKeys=Object.keys(formations);
+let fIdx=0;
+
+function positionDrones(form){
+  const pos=form();
+  pos.forEach((p,i)=>{
+    if(drones[i]){drones[i].style.left=p.x+'%';drones[i].style.top=p.y+'%'}
+  });
+  // Update lines
+  setTimeout(()=>{
+    lines.forEach(l=>{
+      const a=drones[l.a];const b=drones[l.b];
+      const ax=a.offsetLeft+5,ay=a.offsetTop+5;
+      const bx=b.offsetLeft+5,by=b.offsetTop+5;
+      const dx=bx-ax,dy=by-ay;
+      const len=Math.sqrt(dx*dx+dy*dy);
+      const angle=Math.atan2(dy,dx)*180/Math.PI;
+      l.el.style.width=len+'px';
+      l.el.style.left=ax+'px';l.el.style.top=ay+'px';
+      l.el.style.transform='rotate('+angle+'deg)';
+    });
+  },100);
+}
+
+function animateDrones(slideIdx){
+  if(slideIdx===2){
+    positionDrones(formations.scatter);
+    setTimeout(()=>positionDrones(formations.vee),800);
+    setTimeout(()=>positionDrones(formations.grid),2800);
+    setTimeout(()=>positionDrones(formations.circle),4800);
+    setTimeout(()=>positionDrones(formations.vee),6800);
+  }
+}
+
+// ─── INIT ───
+animateCounters(slides[0]);
+positionDrones(formations.scatter);
+
+// Cycling drone formations on slide 3
+setInterval(()=>{
+  if(cur===2){
+    fIdx=(fIdx+1)%fKeys.length;
+    positionDrones(formations[fKeys[fIdx]]);
+  }
+},3000);
+
+})();
+</script>
+</body>
+</html>
