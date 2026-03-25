@@ -179,8 +179,31 @@ a{color:var(--green);text-decoration:none}
 
 /* Formation selector */
 .formation-selector{display:flex;gap:6px}
-.formation-btn{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;transition:.15s}
-.formation-btn.active,.formation-btn:hover{border-color:var(--green);color:var(--green);background:rgba(0,210,106,.1)}
+.formation-btn{padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:.2s;text-transform:uppercase;letter-spacing:.5px}
+.formation-btn.active{border-color:var(--green);color:#fff;background:var(--green);box-shadow:0 0 12px rgba(0,210,106,.3)}
+.formation-btn:hover:not(.active){border-color:var(--green);color:var(--green);background:rgba(0,210,106,.15)}
+
+/* Formation label overlay */
+.formation-label-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:800;color:var(--green);opacity:0;pointer-events:none;z-index:20;text-transform:uppercase;letter-spacing:6px;text-shadow:0 0 40px rgba(0,210,106,.5);transition:opacity .3s}
+.formation-label-overlay.show{opacity:.7;animation:formationFade 2s forwards}
+@keyframes formationFade{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}15%{opacity:.7;transform:translate(-50%,-50%) scale(1)}70%{opacity:.7}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
+
+/* Enhanced drone popup */
+.drone-popup .battery-viz{height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin:4px 0}
+.drone-popup .battery-viz .fill{height:100%;border-radius:5px;transition:width .5s}
+.drone-popup .signal-bars{display:flex;gap:2px;align-items:flex-end;height:16px}
+.drone-popup .signal-bar{width:4px;background:var(--bg4);border-radius:1px}
+.drone-popup .signal-bar.active{background:var(--green)}
+.drone-popup .status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase}
+
+/* Mission progress overlay */
+.mission-overlay{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--green);border-radius:var(--radius2);padding:10px 20px;z-index:15;display:none;text-align:center;backdrop-filter:blur(8px)}
+.mission-overlay.show{display:block}
+.mission-overlay .progress-pct{font-size:28px;font-weight:800;color:var(--green)}
+.mission-overlay .eta{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* Scale bar */
+.scale-bar{position:absolute;bottom:60px;right:16px;z-index:10;font-size:10px;color:var(--text2)}
 
 /* ── Language Selector ── */
 .lang-selector{position:relative;display:flex;align-items:center}
@@ -259,6 +282,11 @@ a{color:var(--green);text-decoration:none}
         </div>
 
         <canvas id="mapCanvas"></canvas>
+        <div class="formation-label-overlay" id="formationLabel"></div>
+        <div class="mission-overlay" id="missionOverlay">
+          <div class="progress-pct" id="missionProgressPct">0%</div>
+          <div class="eta" id="missionETA">ETA --:--</div>
+        </div>
 
         <div class="map-controls">
           <button class="btn primary" id="btnLaunch">Launch Mission</button>
@@ -267,9 +295,9 @@ a{color:var(--green);text-decoration:none}
           <div class="formation-selector" id="formationSelector">
             <button class="formation-btn active" data-f="grid">Grid</button>
             <button class="formation-btn" data-f="spiral">Spiral</button>
-            <button class="formation-btn" data-f="converge">Converge</button>
-            <button class="formation-btn" data-f="line">Line</button>
+            <button class="formation-btn" data-f="circle">Circle</button>
             <button class="formation-btn" data-f="v_shape">V-Shape</button>
+            <button class="formation-btn" data-f="converge">Converge</button>
           </div>
         </div>
 
@@ -277,13 +305,15 @@ a{color:var(--green);text-decoration:none}
         <div class="drone-popup" id="dronePopup">
           <button class="close" id="popupClose">&times;</button>
           <h3 id="popupName">--</h3>
-          <div class="row"><span class="lbl">Status</span><span class="val" id="popupStatus">--</span></div>
+          <div class="row"><span class="lbl">Status</span><span class="val"><span class="status-badge" id="popupStatus">--</span></span></div>
           <div class="row"><span class="lbl">Battery</span><span class="val" id="popupBattery">--</span></div>
+          <div class="battery-viz"><div class="fill" id="popupBatteryBar" style="width:0;background:var(--green)"></div></div>
           <div class="row"><span class="lbl">Altitude</span><span class="val" id="popupAlt">--</span></div>
           <div class="row"><span class="lbl">Speed</span><span class="val" id="popupSpeed">--</span></div>
           <div class="row"><span class="lbl">Heading</span><span class="val" id="popupHeading">--</span></div>
+          <div class="row"><span class="lbl">Signal</span><span class="val"><span class="signal-bars" id="popupSignal"></span></span></div>
+          <div class="row"><span class="lbl">GPS</span><span class="val" id="popupGPS" style="font-size:10px">--</span></div>
           <div class="row"><span class="lbl">Mission</span><span class="val" id="popupMission">--</span></div>
-          <div class="row"><span class="lbl">Waypoints</span><span class="val" id="popupWP">--</span></div>
         </div>
       </div>
 
@@ -500,6 +530,206 @@ let ws = null;
 let wsConnected = false;
 let telemetryHistory = {}; // droneId -> {battery:[], alt:[], speed:[], signal:[]}
 let conflictLog = [];
+let apiAvailable = false;
+
+// ===========================================================================
+// CLIENT-SIDE DRONE SIMULATION (fallback when backend is unavailable)
+// ===========================================================================
+const SIM = {
+  active: false,
+  drones: [],
+  trails: {},       // droneId -> [{x,y,t}]
+  currentFormation: 'grid',
+  targetPositions: [],
+  transitionStart: 0,
+  transitionDuration: 2000,
+  prevPositions: [],
+  missionActive: false,
+  missionProgress: 0,
+  missionStartTime: 0,
+  scannedCells: new Set(),
+  animFrameId: null,
+  dashOffset: 0,
+  fieldPoly: null,  // cached field polygon in lat/lon
+};
+
+const SIM_CENTER = { lat: 4.711, lon: -74.072 };
+const SIM_SPREAD = 0.002;
+const SIM_DRONE_NAMES = ['Halcon-1','Halcon-2','Halcon-3','Halcon-4','Halcon-5'];
+const SIM_STATUSES = ['flying','flying','flying','flying','flying'];
+
+function initSimDrones() {
+  SIM.drones = SIM_DRONE_NAMES.map((name, i) => ({
+    drone_id: 'sim-' + (i+1),
+    name: name,
+    status: SIM_STATUSES[i],
+    battery_pct: 85 + Math.random()*15,
+    position: { lat: SIM_CENTER.lat, lon: SIM_CENTER.lon, alt: 25 + Math.random()*10 },
+    heading: Math.random()*360,
+    remaining_flight_min: 15 + Math.random()*10,
+    sensor_types: ['rgb','ndvi'],
+    mission_id: null,
+    max_speed: 15,
+    _simSpeed: 2 + Math.random()*3,
+    _simSignal: 70 + Math.random()*30,
+  }));
+  SIM.drones.forEach(d => {
+    SIM.trails[d.drone_id] = [];
+    telemetryHistory[d.drone_id] = { battery:[], alt:[], speed:[], signal:[] };
+  });
+  // Initialize formation positions
+  SIM.targetPositions = computeFormationPositions('grid', SIM.drones.length);
+  SIM.prevPositions = SIM.targetPositions.map(p => ({...p}));
+  SIM.transitionStart = Date.now() - SIM.transitionDuration; // already complete
+  // Apply initial positions
+  SIM.drones.forEach((d, i) => {
+    d.position.lat = SIM.targetPositions[i].lat;
+    d.position.lon = SIM.targetPositions[i].lon;
+  });
+  // Define the agricultural field polygon
+  SIM.fieldPoly = [
+    { lat: SIM_CENTER.lat + 0.0025, lon: SIM_CENTER.lon - 0.003 },
+    { lat: SIM_CENTER.lat + 0.003,  lon: SIM_CENTER.lon + 0.002 },
+    { lat: SIM_CENTER.lat - 0.001,  lon: SIM_CENTER.lon + 0.003 },
+    { lat: SIM_CENTER.lat - 0.003,  lon: SIM_CENTER.lon + 0.001 },
+    { lat: SIM_CENTER.lat - 0.002,  lon: SIM_CENTER.lon - 0.003 },
+  ];
+}
+
+function computeFormationPositions(formation, count) {
+  const positions = [];
+  const c = SIM_CENTER;
+  const s = SIM_SPREAD;
+  for (let i = 0; i < count; i++) {
+    let lat, lon;
+    switch (formation) {
+      case 'grid': {
+        const cols = Math.ceil(Math.sqrt(count));
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        lat = c.lat + (row - (Math.ceil(count/cols)-1)/2) * s * 0.6;
+        lon = c.lon + (col - (cols-1)/2) * s * 0.6;
+        break;
+      }
+      case 'circle': {
+        const angle = (i / count) * Math.PI * 2 - Math.PI/2;
+        lat = c.lat + Math.sin(angle) * s;
+        lon = c.lon + Math.cos(angle) * s;
+        break;
+      }
+      case 'spiral': {
+        const t = (i / count) * Math.PI * 4;
+        const r = (i / count) * s;
+        lat = c.lat + Math.sin(t) * r;
+        lon = c.lon + Math.cos(t) * r;
+        break;
+      }
+      case 'v_shape': {
+        const half = Math.floor(count / 2);
+        if (i === 0) {
+          lat = c.lat + s; lon = c.lon;
+        } else {
+          const side = (i % 2 === 1) ? -1 : 1;
+          const depth = Math.ceil(i / 2);
+          lat = c.lat + s - depth * s * 0.5;
+          lon = c.lon + side * depth * s * 0.4;
+        }
+        break;
+      }
+      case 'converge': {
+        // All drones converge toward center
+        const angle2 = (i / count) * Math.PI * 2;
+        const dist = s * 0.15;
+        lat = c.lat + Math.sin(angle2) * dist;
+        lon = c.lon + Math.cos(angle2) * dist;
+        break;
+      }
+      default: {
+        lat = c.lat + (Math.random() - 0.5) * s * 2;
+        lon = c.lon + (Math.random() - 0.5) * s * 2;
+      }
+    }
+    positions.push({ lat, lon });
+  }
+  return positions;
+}
+
+function switchFormation(formation) {
+  SIM.prevPositions = SIM.drones.map(d => ({ lat: d.position.lat, lon: d.position.lon }));
+  SIM.targetPositions = computeFormationPositions(formation, SIM.drones.length);
+  SIM.transitionStart = Date.now();
+  SIM.currentFormation = formation;
+  // Show formation label
+  const label = document.getElementById('formationLabel');
+  label.textContent = formation.replace('_',' ');
+  label.classList.remove('show');
+  void label.offsetWidth; // reflow
+  label.classList.add('show');
+  setTimeout(() => label.classList.remove('show'), 2200);
+  // Update info card
+  document.getElementById('mapFormation').textContent = formation.replace('_','-').toUpperCase();
+}
+
+function lerpVal(a, b, t) { return a + (b - a) * Math.min(1, Math.max(0, t)); }
+
+function updateSimPositions() {
+  const now = Date.now();
+  const t = Math.min(1, (now - SIM.transitionStart) / SIM.transitionDuration);
+  // Ease out cubic
+  const ease = 1 - Math.pow(1 - t, 3);
+  SIM.drones.forEach((d, i) => {
+    const prev = SIM.prevPositions[i];
+    const target = SIM.targetPositions[i];
+    d.position.lat = lerpVal(prev.lat, target.lat, ease);
+    d.position.lon = lerpVal(prev.lon, target.lon, ease);
+    // Add slight hovering wobble when transition complete
+    if (t >= 1) {
+      d.position.lat += Math.sin(now * 0.001 + i * 1.5) * 0.00002;
+      d.position.lon += Math.cos(now * 0.0012 + i * 2.1) * 0.00002;
+    }
+    // Update heading toward target
+    const dx = target.lon - d.position.lon;
+    const dy = target.lat - d.position.lat;
+    if (Math.abs(dx) > 0.000001 || Math.abs(dy) > 0.000001) {
+      d.heading = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+    }
+    // Drain battery slowly
+    d.battery_pct = Math.max(5, d.battery_pct - 0.002);
+    // Update altitude wobble
+    d.position.alt = 28 + Math.sin(now * 0.0005 + i) * 3;
+    d._simSpeed = 2 + Math.sin(now * 0.001 + i * 0.7) * 1.5;
+    d._simSignal = 75 + Math.sin(now * 0.0003 + i * 1.3) * 20;
+    // Record trail
+    const trail = SIM.trails[d.drone_id];
+    trail.push({ lat: d.position.lat, lon: d.position.lon, t: now });
+    if (trail.length > 25) trail.shift();
+  });
+  // Simulate mission progress
+  if (SIM.missionActive) {
+    SIM.missionProgress = Math.min(100, SIM.missionProgress + 0.05);
+    // Mark scanned cells
+    const cellX = Math.floor((SIM.missionProgress / 100) * 10);
+    for (let y = 0; y < 5; y++) {
+      if (cellX >= 0 && cellX < 10) SIM.scannedCells.add(`${cellX},${y}`);
+    }
+  }
+}
+
+// Copy sim drones into the main `drones` array so the rest of the app sees them
+function syncSimToState() {
+  if (!SIM.active) return;
+  drones = SIM.drones.map(d => ({...d, position: {...d.position}}));
+  // Update telemetry history
+  drones.forEach(d => {
+    const h = telemetryHistory[d.drone_id];
+    if (!h) return;
+    h.battery.push(d.battery_pct);
+    h.alt.push(d.position.alt);
+    h.speed.push(d._simSpeed || 0);
+    h.signal.push(d._simSignal || 80);
+    if (h.battery.length > 60) { h.battery.shift(); h.alt.shift(); h.speed.shift(); h.signal.shift(); }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Tab switching
@@ -622,28 +852,39 @@ function updateTopbar() {
 }
 
 // ---------------------------------------------------------------------------
-// MAP rendering
+// MAP rendering — animated loop with trails, mesh, field visualization
 // ---------------------------------------------------------------------------
+let _mapBounds = null; // cached for click detection
+
 function renderMap() {
   const canvas = document.getElementById('mapCanvas');
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  canvas.style.width = rect.width + 'px';
-  canvas.style.height = rect.height + 'px';
-  ctx.scale(dpr, dpr);
+  const needsResize = canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr);
+  if (needsResize) {
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const W = rect.width, H = rect.height;
+  const now = Date.now();
+
+  // Advance dash offset for animated mesh
+  SIM.dashOffset = (now * 0.03) % 20;
 
   // Background
   ctx.fillStyle = '#0a0f14';
   ctx.fillRect(0, 0, W, H);
 
-  // Compute bounds from all drone positions + areas
+  // Compute bounds
   let allLats = [], allLons = [];
-  drones.forEach(d => { allLats.push(d.position.lat); allLons.push(d.position.lon); });
+  drones.forEach(d => { if(d.position){allLats.push(d.position.lat); allLons.push(d.position.lon);} });
   areas.forEach(a => a.boundary.forEach(p => { allLats.push(p.lat); allLons.push(p.lon); }));
+  // Include field polygon if sim
+  if (SIM.active && SIM.fieldPoly) SIM.fieldPoly.forEach(p => { allLats.push(p.lat); allLons.push(p.lon); });
 
   if (allLats.length === 0) { allLats = [4.709, 4.713]; allLons = [-74.075, -74.069]; }
 
@@ -657,6 +898,65 @@ function renderMap() {
     const x = pad + ((lon - minLon) / (maxLon - minLon)) * (W - 2*pad);
     const y = pad + ((maxLat - lat) / (maxLat - minLat)) * (H - 2*pad);
     return [x, y];
+  }
+  _mapBounds = { minLat, maxLat, minLon, maxLon, pad, W, H, toXY };
+
+  // ── FIELD VISUALIZATION ──
+  if (SIM.active && SIM.fieldPoly) {
+    const fp = SIM.fieldPoly;
+    // Draw field polygon
+    ctx.beginPath();
+    const [fx0, fy0] = toXY(fp[0].lat, fp[0].lon);
+    ctx.moveTo(fx0, fy0);
+    for (let i = 1; i < fp.length; i++) {
+      const [fpx, fpy] = toXY(fp[i].lat, fp[i].lon);
+      ctx.lineTo(fpx, fpy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,80,20,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,210,106,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Crop row lines inside the field
+    ctx.save();
+    ctx.clip(); // clip to field polygon
+    const fMinLat = Math.min(...fp.map(p=>p.lat));
+    const fMaxLat = Math.max(...fp.map(p=>p.lat));
+    const fMinLon = Math.min(...fp.map(p=>p.lon));
+    const fMaxLon = Math.max(...fp.map(p=>p.lon));
+    ctx.strokeStyle = 'rgba(0,160,60,0.12)';
+    ctx.lineWidth = 1;
+    const rowSpacing = (fMaxLon - fMinLon) / 16;
+    for (let lon = fMinLon; lon <= fMaxLon; lon += rowSpacing) {
+      const [rx1, ry1] = toXY(fMinLat, lon);
+      const [rx2, ry2] = toXY(fMaxLat, lon);
+      ctx.beginPath(); ctx.moveTo(rx1, ry1); ctx.lineTo(rx2, ry2); ctx.stroke();
+    }
+    ctx.restore();
+
+    // Coordinate labels on field edges
+    ctx.font = '9px monospace';
+    ctx.fillStyle = 'rgba(0,210,106,0.45)';
+    fp.forEach((p, i) => {
+      const [px, py] = toXY(p.lat, p.lon);
+      ctx.textAlign = 'center';
+      ctx.fillText(`${p.lat.toFixed(4)},${p.lon.toFixed(4)}`, px, py - 8);
+    });
+
+    // ── SCANNED AREA (mission progress) ──
+    if (SIM.missionActive && SIM.scannedCells.size > 0) {
+      const cellW = (fMaxLon - fMinLon) / 10;
+      const cellH = (fMaxLat - fMinLat) / 5;
+      ctx.fillStyle = 'rgba(0,210,106,0.12)';
+      SIM.scannedCells.forEach(key => {
+        const [cx, cy] = key.split(',').map(Number);
+        const [sx, sy] = toXY(fMinLat + (cy+1)*cellH, fMinLon + cx*cellW);
+        const [sx2, sy2] = toXY(fMinLat + cy*cellH, fMinLon + (cx+1)*cellW);
+        ctx.fillRect(sx, sy, sx2-sx, sy2-sy);
+      });
+    }
   }
 
   // Draw grid
@@ -675,7 +975,7 @@ function renderMap() {
     }
   }
 
-  // Draw mission areas
+  // Draw mission areas (from API)
   areas.forEach(area => {
     if (area.boundary.length < 3) return;
     ctx.beginPath();
@@ -694,11 +994,9 @@ function renderMap() {
     ctx.setLineDash([8, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Area label
-    const cx = area.boundary.reduce((s, p) => s + p.lat, 0) / area.boundary.length;
-    const cy = area.boundary.reduce((s, p) => s + p.lon, 0) / area.boundary.length;
-    const [lx, ly] = toXY(cx, cy);
+    const acx = area.boundary.reduce((s, p) => s + p.lat, 0) / area.boundary.length;
+    const acy = area.boundary.reduce((s, p) => s + p.lon, 0) / area.boundary.length;
+    const [lx, ly] = toXY(acx, acy);
     ctx.fillStyle = 'rgba(200,169,110,0.6)';
     ctx.font = '11px -apple-system, sans-serif';
     ctx.textAlign = 'center';
@@ -706,37 +1004,62 @@ function renderMap() {
     ctx.fillText(`${(area.area_m2 / 10000).toFixed(1)} ha`, lx, ly + 14);
   });
 
-  // Mesh connections
-  if (document.getElementById('toggleMesh').classList.contains('on') && meshData.nodes) {
-    ctx.strokeStyle = 'rgba(0,210,106,0.15)';
-    ctx.lineWidth = 1;
-    const droneMap = {};
-    drones.forEach(d => droneMap[d.drone_id] = d);
-    Object.entries(meshData.nodes).forEach(([did, node]) => {
-      const dr = droneMap[did];
-      if (!dr) return;
-      const [x1, y1] = toXY(dr.position.lat, dr.position.lon);
-      (node.neighbours || []).forEach(nid => {
-        const nb = droneMap[nid];
-        if (!nb) return;
-        const [x2, y2] = toXY(nb.position.lat, nb.position.lon);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        // Midpoint pulse
-        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-        ctx.fillStyle = 'rgba(0,210,106,0.3)';
-        ctx.beginPath(); ctx.arc(mx, my, 2, 0, Math.PI*2); ctx.fill();
+  // ── MESH CONNECTIONS (animated dashes) ──
+  const showMesh = document.getElementById('toggleMesh').classList.contains('on');
+  if (showMesh) {
+    if (meshData.nodes) {
+      // API mesh data
+      const droneMap = {};
+      drones.forEach(d => droneMap[d.drone_id] = d);
+      ctx.strokeStyle = 'rgba(0,210,106,0.2)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.lineDashOffset = -SIM.dashOffset;
+      Object.entries(meshData.nodes).forEach(([did, node]) => {
+        const dr = droneMap[did];
+        if (!dr) return;
+        const [x1, y1] = toXY(dr.position.lat, dr.position.lon);
+        (node.neighbours || []).forEach(nid => {
+          const nb = droneMap[nid];
+          if (!nb) return;
+          const [x2, y2] = toXY(nb.position.lat, nb.position.lon);
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        });
       });
-    });
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+    } else if (SIM.active && drones.length > 1) {
+      // Sim mesh: connect every drone to every other (within range)
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.lineDashOffset = -SIM.dashOffset;
+      for (let i = 0; i < drones.length; i++) {
+        for (let j = i + 1; j < drones.length; j++) {
+          const [x1, y1] = toXY(drones[i].position.lat, drones[i].position.lon);
+          const [x2, y2] = toXY(drones[j].position.lat, drones[j].position.lon);
+          const dist = Math.hypot(x2-x1, y2-y1);
+          if (dist < 400) {
+            const alpha = Math.max(0.05, 0.25 - dist/2000);
+            ctx.strokeStyle = `rgba(0,210,106,${alpha})`;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+            // Animated pulse traveling along the line
+            const pulseT = ((now * 0.001 + i*0.5 + j*0.3) % 1);
+            const px = x1 + (x2 - x1) * pulseT;
+            const py = y1 + (y2 - y1) * pulseT;
+            ctx.fillStyle = 'rgba(0,210,106,0.5)';
+            ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
+          }
+        }
+      }
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+    }
   }
 
   // Waypoints
   if (document.getElementById('toggleWaypoints').classList.contains('on')) {
     drones.forEach(d => {
       if (d.status !== 'flying') return;
-      // We don't have individual waypoints from polling, so draw a trail hint
       const [dx, dy] = toXY(d.position.lat, d.position.lon);
       const headRad = (d.heading || 0) * Math.PI / 180;
       const len = 30;
@@ -745,75 +1068,149 @@ function renderMap() {
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
       ctx.moveTo(dx, dy);
-      // heading: 0=North, clockwise
       ctx.lineTo(dx + Math.sin(headRad)*len, dy - Math.cos(headRad)*len);
       ctx.stroke();
       ctx.setLineDash([]);
     });
   }
 
-  // Draw drones
+  // ── DRONE TRAILS ──
   const statusColor = {
     idle: '#00d26a', armed: '#00d4ff', flying: '#1e90ff',
     returning: '#ffa502', charging: '#c8a96e', fault: '#ff4757', offline: '#6e7681'
   };
-  const now = Date.now();
 
+  drones.forEach(d => {
+    const color = statusColor[d.status] || '#6e7681';
+    const trail = SIM.trails[d.drone_id];
+    if (trail && trail.length > 1) {
+      for (let ti = 0; ti < trail.length - 1; ti++) {
+        const alpha = (ti / trail.length) * 0.5;
+        const [tx, ty] = toXY(trail[ti].lat, trail[ti].lon);
+        ctx.fillStyle = color + Math.floor(alpha * 255).toString(16).padStart(2,'0');
+        const size = 1.5 + (ti / trail.length) * 2;
+        ctx.beginPath(); ctx.arc(tx, ty, size, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  });
+
+  // ── DRAW DRONES ──
   drones.forEach(d => {
     const [x, y] = toXY(d.position.lat, d.position.lon);
     const color = statusColor[d.status] || '#6e7681';
 
-    // Outer glow
+    // Outer glow (pulsing)
     if (d.status === 'flying' || d.status === 'returning') {
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, 20);
-      grad.addColorStop(0, color + '40');
+      const pulseR = 18 + Math.sin(now * 0.003) * 4;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, pulseR);
+      grad.addColorStop(0, color + '50');
       grad.addColorStop(1, color + '00');
       ctx.fillStyle = grad;
-      ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, pulseR, 0, Math.PI*2); ctx.fill();
     }
 
-    // Drone body
+    // Drone body (diamond shape for better look)
+    ctx.save();
+    ctx.translate(x, y);
+    const headRad = (d.heading || 0) * Math.PI / 180;
+    ctx.rotate(headRad);
     ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
-
-    // Direction indicator
-    if (d.status === 'flying' || d.status === 'returning') {
-      const headRad = ((d.heading || 0)) * Math.PI / 180;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.sin(headRad)*14, y - Math.cos(headRad)*14);
-      ctx.stroke();
-      // Arrow head
-      const ax = x + Math.sin(headRad)*14, ay = y - Math.cos(headRad)*14;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(ax, ay, 3, 0, Math.PI*2);
-      ctx.fill();
-    }
+    ctx.beginPath();
+    ctx.moveTo(0, -9);
+    ctx.lineTo(6, 3);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(-6, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
 
     // Battery indicator ring
     const battArc = (d.battery_pct / 100) * Math.PI * 2;
-    ctx.strokeStyle = d.battery_pct > 30 ? '#00d26a' : d.battery_pct > 15 ? '#ffa502' : '#ff4757';
+    ctx.strokeStyle = d.battery_pct > 50 ? '#00d26a' : d.battery_pct > 20 ? '#ffa502' : '#ff4757';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x, y, 11, -Math.PI/2, -Math.PI/2 + battArc);
+    ctx.arc(x, y, 13, -Math.PI/2, -Math.PI/2 + battArc);
     ctx.stroke();
 
     // Label
     ctx.fillStyle = '#e6edf3';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(d.name, x, y + 22);
+    ctx.fillText(d.name, x, y + 24);
+    // Battery % under name
+    ctx.fillStyle = d.battery_pct > 50 ? '#00d26a88' : d.battery_pct > 20 ? '#ffa50288' : '#ff475788';
+    ctx.font = '9px monospace';
+    ctx.fillText(d.battery_pct.toFixed(0) + '%', x, y + 34);
   });
+
+  // ── NORTH ARROW ──
+  ctx.save();
+  ctx.translate(W - 40, 80);
+  ctx.strokeStyle = 'rgba(230,237,243,0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, -20); ctx.stroke();
+  // Arrow head
+  ctx.fillStyle = 'rgba(230,237,243,0.5)';
+  ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-5, -12); ctx.lineTo(5, -12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('N', 0, -26);
+  ctx.restore();
+
+  // ── SCALE BAR ──
+  ctx.save();
+  const scaleBarX = W - 130, scaleBarY = H - 80;
+  // Approximate: 1 degree lat ~ 111km
+  const degPerPixel = (maxLat - minLat) / (H - 2*pad);
+  const metersPerPixel = degPerPixel * 111000;
+  const barLenPixels = 80;
+  const barMeters = Math.round(metersPerPixel * barLenPixels);
+  let barLabel;
+  if (barMeters >= 1000) barLabel = (barMeters/1000).toFixed(1) + ' km';
+  else barLabel = barMeters + ' m';
+  ctx.strokeStyle = 'rgba(230,237,243,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(scaleBarX, scaleBarY); ctx.lineTo(scaleBarX + barLenPixels, scaleBarY); ctx.stroke();
+  // End ticks
+  ctx.beginPath(); ctx.moveTo(scaleBarX, scaleBarY-4); ctx.lineTo(scaleBarX, scaleBarY+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(scaleBarX+barLenPixels, scaleBarY-4); ctx.lineTo(scaleBarX+barLenPixels, scaleBarY+4); ctx.stroke();
+  ctx.fillStyle = 'rgba(230,237,243,0.5)';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(barLabel, scaleBarX + barLenPixels/2, scaleBarY - 8);
+  ctx.restore();
 
   // Update info overlays
   const activeDrones = drones.filter(d => d.status === 'flying').length;
-  document.getElementById('mapActiveDrones').textContent = activeDrones;
-  const activeMission = missions.find(m => m.status === 'active');
-  document.getElementById('mapFormation').textContent = activeMission ? activeMission.formation.toUpperCase() : 'NONE';
-  document.getElementById('mapMesh').textContent = meshData.connectivity_ratio !== undefined ? (meshData.connectivity_ratio * 100).toFixed(0) + '%' : '--';
+  document.getElementById('mapActiveDrones').textContent = activeDrones || drones.length;
+  if (!SIM.active) {
+    const activeMission = missions.find(m => m.status === 'active');
+    document.getElementById('mapFormation').textContent = activeMission ? activeMission.formation.toUpperCase() : 'NONE';
+  }
+  document.getElementById('mapMesh').textContent = SIM.active
+    ? (drones.length > 1 ? '100%' : '--')
+    : (meshData.connectivity_ratio !== undefined ? (meshData.connectivity_ratio * 100).toFixed(0) + '%' : '--');
+
+  // ── MISSION PROGRESS OVERLAY ──
+  const mOverlay = document.getElementById('missionOverlay');
+  const apiMission = missions.find(m => m.status === 'active');
+  if (SIM.missionActive || apiMission) {
+    mOverlay.classList.add('show');
+    const pct = SIM.missionActive ? SIM.missionProgress : (apiMission ? apiMission.progress_pct : 0);
+    document.getElementById('missionProgressPct').textContent = pct.toFixed(1) + '%';
+    const elapsed = SIM.missionActive ? (Date.now() - SIM.missionStartTime) / 1000 : 0;
+    const totalEst = pct > 0 ? (elapsed / (pct/100)) : 0;
+    const remaining = Math.max(0, totalEst - elapsed);
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining % 60);
+    document.getElementById('missionETA').textContent = pct > 1 ? `ETA ${mins}:${secs.toString().padStart(2,'0')}` : 'Calculating...';
+  } else {
+    mOverlay.classList.remove('show');
+  }
 
   // Store drone XY for click detection
   canvas._dronePositions = drones.map(d => {
@@ -821,6 +1218,22 @@ function renderMap() {
     return { drone: d, x, y };
   });
 }
+
+// ---------------------------------------------------------------------------
+// ANIMATION LOOP — runs continuously when map tab is visible
+// ---------------------------------------------------------------------------
+function mapAnimationLoop() {
+  if (SIM.active) {
+    updateSimPositions();
+    syncSimToState();
+  }
+  if (document.getElementById('tab-map').classList.contains('active')) {
+    renderMap();
+  }
+  SIM.animFrameId = requestAnimationFrame(mapAnimationLoop);
+}
+// Start animation loop immediately
+SIM.animFrameId = requestAnimationFrame(mapAnimationLoop);
 
 // Map click -> drone popup
 document.getElementById('mapCanvas').addEventListener('click', e => {
@@ -842,13 +1255,37 @@ document.getElementById('mapCanvas').addEventListener('click', e => {
     popup.style.left = Math.min(found.x + 20, window.innerWidth - 300) + 'px';
     popup.style.top = Math.min(found.y + 60, window.innerHeight - 250) + 'px';
     document.getElementById('popupName').textContent = `${d.name} (${d.drone_id.slice(-8)})`;
-    document.getElementById('popupStatus').textContent = d.status.toUpperCase();
+    // Status badge
+    const statusEl = document.getElementById('popupStatus');
+    statusEl.textContent = d.status.toUpperCase();
+    const sColors = {flying:'rgba(30,144,255,.2)',idle:'rgba(0,210,106,.2)',returning:'rgba(255,165,2,.2)',armed:'rgba(0,212,255,.2)',fault:'rgba(255,71,87,.2)'};
+    const sBorders = {flying:'#1e90ff',idle:'#00d26a',returning:'#ffa502',armed:'#00d4ff',fault:'#ff4757'};
+    statusEl.style.background = sColors[d.status] || 'rgba(110,118,129,.2)';
+    statusEl.style.color = sBorders[d.status] || '#6e7681';
+    // Battery bar
     document.getElementById('popupBattery').textContent = d.battery_pct.toFixed(1) + '%';
+    const battBar = document.getElementById('popupBatteryBar');
+    battBar.style.width = d.battery_pct + '%';
+    battBar.style.background = d.battery_pct > 50 ? 'var(--green)' : d.battery_pct > 20 ? 'var(--orange)' : 'var(--red)';
+    // Altitude & Speed
     document.getElementById('popupAlt').textContent = (d.position?.alt || 0).toFixed(1) + ' m';
-    document.getElementById('popupSpeed').textContent = (d.remaining_flight_min ? '~' + d.remaining_flight_min.toFixed(0) + ' min' : '--');
-    document.getElementById('popupHeading').textContent = '--';
-    document.getElementById('popupMission').textContent = d.mission_id || 'None';
-    document.getElementById('popupWP').textContent = '--';
+    document.getElementById('popupSpeed').textContent = (d._simSpeed || 0).toFixed(1) + ' m/s';
+    document.getElementById('popupHeading').textContent = (d.heading || 0).toFixed(0) + '\u00b0';
+    // Signal bars
+    const sigStrength = d._simSignal || 80;
+    const sigBars = document.getElementById('popupSignal');
+    const barCount = 5;
+    const activeBars = Math.ceil((sigStrength / 100) * barCount);
+    sigBars.innerHTML = '';
+    for (let b = 0; b < barCount; b++) {
+      const bar = document.createElement('span');
+      bar.className = 'signal-bar' + (b < activeBars ? ' active' : '');
+      bar.style.height = (4 + b * 3) + 'px';
+      sigBars.appendChild(bar);
+    }
+    // GPS
+    document.getElementById('popupGPS').textContent = `${d.position.lat.toFixed(6)}, ${d.position.lon.toFixed(6)}`;
+    document.getElementById('popupMission').textContent = d.mission_id || (SIM.missionActive ? 'SIM Mission' : 'None');
   } else {
     popup.style.display = 'none';
     selectedDrone = null;
@@ -964,11 +1401,21 @@ async function abortMission(id) { await api(`/api/v1/missions/${id}/abort`, { me
 // Map control buttons
 // ---------------------------------------------------------------------------
 document.getElementById('btnLaunch').addEventListener('click', async () => {
+  if (SIM.active) {
+    // In sim mode, toggle mission
+    SIM.missionActive = !SIM.missionActive;
+    if (SIM.missionActive) {
+      SIM.missionStartTime = Date.now();
+      SIM.missionProgress = 0;
+      SIM.scannedCells.clear();
+      SIM.drones.forEach(d => d.status = 'flying');
+    }
+    return;
+  }
   const planned = missions.find(m => m.status === 'planned');
   if (planned) {
     await startMission(planned.mission_id);
   } else {
-    // Create a new mission with all idle drones, then start it
     const area = areas[0];
     if (!area) { alert('No area defined'); return; }
     const formation = document.querySelector('.formation-btn.active')?.dataset.f || 'grid';
@@ -1006,6 +1453,10 @@ document.querySelectorAll('.formation-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    // Trigger formation switch animation (works in both sim and API mode)
+    if (SIM.active) {
+      switchFormation(btn.dataset.f);
+    }
   });
 });
 
@@ -1260,16 +1711,55 @@ function connectWS() {
 // ---------------------------------------------------------------------------
 // Resize
 // ---------------------------------------------------------------------------
-window.addEventListener('resize', () => {
-  if (document.getElementById('tab-map').classList.contains('active')) renderMap();
-});
+// Resize is handled by the animation loop automatically
 
 // ---------------------------------------------------------------------------
-// Init
+// Init — detect API, fall back to client-side simulation
 // ---------------------------------------------------------------------------
-fetchAll();
-connectWS();
-setInterval(fetchAll, 2000);
+async function initApp() {
+  const result = await api('/api/v1/drones');
+  if (result && result.length > 0) {
+    apiAvailable = true;
+    SIM.active = false;
+    drones = result;
+    fetchAll();
+    connectWS();
+    setInterval(fetchAll, 2000);
+  } else {
+    // API not available or returned no drones — activate client-side simulation
+    console.log('%c[Enjambre] Backend unavailable — starting client-side drone simulation', 'color:#00d26a;font-weight:bold');
+    apiAvailable = false;
+    SIM.active = true;
+    initSimDrones();
+    syncSimToState();
+    // Start a simulated mission after 3 seconds
+    setTimeout(() => {
+      SIM.missionActive = true;
+      SIM.missionStartTime = Date.now();
+    }, 3000);
+    // Periodically try to reconnect to API
+    setInterval(async () => {
+      const r = await api('/api/v1/drones');
+      if (r && r.length > 0) {
+        apiAvailable = true;
+        SIM.active = false;
+        drones = r;
+        fetchAll();
+        connectWS();
+      }
+    }, 10000);
+    // Update non-map UI periodically with sim data
+    setInterval(() => {
+      if (SIM.active) {
+        syncSimToState();
+        updateTopbar();
+        renderFleet();
+        renderTelemetry();
+      }
+    }, 2000);
+  }
+}
+initApp();
 
 </script>
 </body>
