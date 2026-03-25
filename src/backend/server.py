@@ -29,6 +29,7 @@ from swarm_coordinator import (
     CollisionAvoidance,
     Drone,
     DroneStatus,
+    FormationPlanner,
     FormationType,
     GeoPoint,
     MissionStatus,
@@ -132,9 +133,16 @@ def _build_telemetry_snapshot(tick_result: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def _seed_demo_data() -> None:
-    """Pre-register 5 drones and 1 sample area so the demo works out of the box."""
-    # Base position: agricultural zone near Bogota, Colombia
-    base_lat, base_lon = 4.711, -74.072
+    """
+    Pre-register 5 drones and auto-start the "Finca El Dorado" crop disease
+    scanning mission so the demo shows drones FLYING immediately on startup.
+
+    Scenario: 20-hectare coffee plantation near Armenia, Colombia.
+    The swarm starts in Grid formation scanning for coffee leaf rust (roya).
+    Judges can switch to Converge formation to simulate anomaly response.
+    """
+    # Base position: coffee belt near Armenia, Quindío, Colombia
+    base_lat, base_lon = 4.534, -75.681
 
     drone_defs = [
         ("Halcon-1",  base_lat + 0.0010, base_lon + 0.0005,  14.0, ["rgb", "ndvi"]),
@@ -152,10 +160,10 @@ def _seed_demo_data() -> None:
             comm_range=2000.0,
             sensor_types=sensors,
         )
-        d.battery_pct = random.uniform(72, 100)
+        d.battery_pct = random.uniform(78, 97)
         logger.info("Seeded drone %s (%s)", d.drone_id, name)
 
-    # Sample mission area — roughly 20 hectares rectangular field
+    # Mission area — ~20 hectares rectangular coffee plantation
     boundary = [
         GeoPoint(base_lat - 0.002, base_lon - 0.003),
         GeoPoint(base_lat - 0.002, base_lon + 0.003),
@@ -163,13 +171,13 @@ def _seed_demo_data() -> None:
         GeoPoint(base_lat + 0.002, base_lon - 0.003),
     ]
     area = coordinator.create_area("Finca El Dorado — Lote Norte", boundary)
-    logger.info("Seeded area %s", area.area_id)
+    logger.info("Seeded area %s (%s m²)", area.area_id, round(area.area_m2))
 
-    # Create a planned mission so the demo can start it immediately
+    # Create and auto-start the crop disease scanning mission
     drone_ids = list(coordinator.drones.keys())
     try:
         mission = coordinator.create_mission(
-            name="Escaneo NDVI — Lote Norte",
+            name="Detección Roya — Finca El Dorado (20 ha)",
             area_id=area.area_id,
             formation=FormationType.GRID,
             altitude_m=30.0,
@@ -177,9 +185,17 @@ def _seed_demo_data() -> None:
             speed_ms=8.0,
             drone_ids=drone_ids,
         )
-        # Auto-start the mission so drones are moving for the demo
         coordinator.start_mission(mission.mission_id)
-        logger.info("Seeded and auto-started mission %s", mission.mission_id)
+        logger.info(
+            "Auto-started mission %s — %d drones FLYING in Grid formation",
+            mission.mission_id,
+            len(drone_ids),
+        )
+        logger.info(
+            "DEMO TIP: POST /api/v1/missions/%s/formation {\"formation\":\"converge\"} "
+            "to simulate anomaly detection response",
+            mission.mission_id,
+        )
     except Exception as e:
         logger.warning("Could not auto-start seed mission: %s", e)
 
@@ -598,6 +614,61 @@ async def abort_mission(mission_id: str):
         mission = coordinator.abort_mission(mission_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    return _mission_to_response(mission)
+
+
+class FormationChangeRequest(BaseModel):
+    formation: str = Field(..., description="New formation type: grid, spiral, converge, line, v_shape")
+
+
+@app.post("/api/v1/missions/{mission_id}/formation", response_model=MissionResponse, tags=["Missions"],
+           dependencies=[Depends(verify_api_key)])
+async def change_formation(mission_id: str, req: FormationChangeRequest):
+    """
+    Change the formation of an active mission and replan waypoints.
+    Use 'converge' when an anomaly is detected to focus the swarm on a region.
+    """
+    mission = coordinator.missions.get(mission_id)
+    if not mission:
+        raise HTTPException(404, f"Mission {mission_id} not found")
+    if mission.status not in (MissionStatus.ACTIVE, MissionStatus.PAUSED):
+        raise HTTPException(400, f"Mission is {mission.status.value}, must be active or paused")
+    try:
+        new_formation = FormationType(req.formation)
+    except ValueError:
+        raise HTTPException(400, f"Invalid formation: {req.formation}. "
+                            f"Options: {[f.value for f in FormationType]}")
+
+    mission.formation = new_formation
+
+    # Replan waypoints with the new formation.
+    wp_clusters = FormationPlanner.plan(
+        area=mission.area,
+        n_drones=len(mission.assigned_drones),
+        formation=new_formation,
+        altitude_m=mission.altitude_m,
+        overlap_pct=mission.overlap_pct,
+    )
+
+    # Direct assignment (round-robin by drone index) since drones are already
+    # flying and TaskAssigner.assign filters for is_available (IDLE/ARMED).
+    active_drone_ids = [
+        did for did in mission.assigned_drones if did in coordinator.drones
+    ]
+    assignment: dict[str, list[GeoPoint]] = {}
+    for idx, drone_id in enumerate(active_drone_ids):
+        assignment[drone_id] = wp_clusters.get(idx, [])
+    mission.waypoints_per_drone = assignment
+
+    # Update drones with new waypoints, reset progress.
+    for drone_id, waypoints in assignment.items():
+        drone = coordinator.drones.get(drone_id)
+        if drone:
+            drone.waypoints = waypoints
+            drone.current_wp_idx = 0
+
+    logger.info("Mission %s formation changed to %s — waypoints replanned",
+                mission_id, new_formation.value)
     return _mission_to_response(mission)
 
 
