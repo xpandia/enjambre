@@ -18,7 +18,7 @@ from typing import Optional
 import random
 
 import numpy as np
-from fastapi import Depends, FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Header, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
@@ -724,7 +724,7 @@ async def ingest_telemetry(req: TelemetryIngest):
 
 
 @app.get("/api/v1/telemetry/{drone_id}/history", tags=["Telemetry"])
-async def telemetry_history(drone_id: str, limit: int = Field(50, ge=1, le=1000)):
+async def telemetry_history(drone_id: str, limit: int = Query(50, ge=1, le=1000)):
     """Get recent telemetry history for a drone."""
     drone = coordinator.drones.get(drone_id)
     if not drone:
@@ -860,7 +860,7 @@ async def get_weather(lat: float = 4.711, lon: float = -74.072):
 
 
 @app.get("/api/v1/weather/forecast", tags=["Weather"])
-async def get_weather_forecast(lat: float = 4.711, lon: float = -74.072, hours: int = Field(6, ge=1, le=72)):
+async def get_weather_forecast(lat: float = 4.711, lon: float = -74.072, hours: int = Query(6, ge=1, le=72)):
     """
     Get weather forecast for the next N hours.
     Stub -- generates synthetic forecast data.
