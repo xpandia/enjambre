@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -112,6 +112,16 @@
       box-shadow: 0 4px 24px var(--green-glow);
       color: var(--bg) !important;
     }
+
+    /* ── Language Selector ── */
+    .lang-selector { position: relative; display: flex; align-items: center; }
+    .lang-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-muted); transition: all 0.2s; font-family: inherit; }
+    .lang-btn:hover { border-color: var(--green); color: var(--text); }
+    .lang-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 2000; min-width: 160px; display: none; overflow: hidden; }
+    .lang-dropdown.show { display: block; }
+    .lang-option { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-size: 13px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+    .lang-option:hover { background: rgba(0,210,106,0.06); color: var(--text); }
+    .lang-option.active { color: var(--green); background: rgba(0,210,106,0.08); }
 
     .nav-hamburger {
       display: none;
@@ -937,12 +947,20 @@
       Enjambre
     </a>
     <ul class="nav-links" id="navLinks">
-      <li><a href="#problem">Problema</a></li>
-      <li><a href="#solution">Solucion</a></li>
-      <li><a href="#how">Proceso</a></li>
-      <li><a href="#cases">Casos de Uso</a></li>
-      <li><a href="#tech">Stack</a></li>
-      <li><a href="#cta" class="nav-cta">Unirse al Enjambre</a></li>
+      <li><a href="#problem" data-i18n="navProblem">Problem</a></li>
+      <li><a href="#solution" data-i18n="navSolution">Solution</a></li>
+      <li><a href="#how" data-i18n="navProcess">Process</a></li>
+      <li><a href="#cases" data-i18n="navCases">Use Cases</a></li>
+      <li><a href="#tech" data-i18n="navStack">Stack</a></li>
+      <li><a href="#cta" class="nav-cta" data-i18n="navJoin">Join the Swarm</a></li>
+      <li class="lang-selector">
+        <button class="lang-btn" id="langBtn" onclick="event.preventDefault();toggleLangDropdown()">&#127760; EN</button>
+        <div class="lang-dropdown" id="langDropdown">
+          <div class="lang-option active" data-lang="en" onclick="setLang('en')">&#127468;&#127463; English</div>
+          <div class="lang-option" data-lang="es" onclick="setLang('es')">&#127466;&#127480; Espa&ntilde;ol</div>
+          <div class="lang-option" data-lang="zh" onclick="setLang('zh')">&#127464;&#127475; &#20013;&#25991;</div>
+        </div>
+      </li>
     </ul>
     <button class="nav-hamburger" id="hamburger" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -959,30 +977,30 @@
         The Vertex Swarm Challenge 2026
       </div>
       <h1>
-        <span class="line">Coordina.</span>
-        <span class="line green">Cultiva.</span>
-        <span class="line earth">Conquista.</span>
+        <span class="line" data-i18n="heroLine1">Coordinate.</span>
+        <span class="line green" data-i18n="heroLine2">Cultivate.</span>
+        <span class="line earth" data-i18n="heroLine3">Conquer.</span>
       </h1>
-      <p class="hero-sub">
-        Coordinacion descentralizada de enjambres de drones agricolas.
-        Sin servidores. Sin limites. Solo inteligencia colectiva volando sobre la tierra.
+      <p class="hero-sub" data-i18n="heroSub">
+        Decentralized swarm coordination for agricultural drones.
+        No servers. No limits. Just collective intelligence flying over the land.
       </p>
       <div class="hero-actions">
-        <a href="#how" class="btn-primary">Ver en Accion &#8594;</a>
+        <a href="#how" class="btn-primary" data-i18n="heroAction">See It In Action &#8594;</a>
         <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank">GitHub &#8599;</a>
       </div>
       <div class="hero-metrics">
         <div class="metric">
           <div class="metric-value">40%</div>
-          <div class="metric-label">Tierra cultivable mundial en LATAM</div>
+          <div class="metric-label" data-i18n="metricLand">World's arable land in LATAM</div>
         </div>
         <div class="metric">
           <div class="metric-value">$65B</div>
-          <div class="metric-label">Perdidos anualmente en ineficiencia</div>
+          <div class="metric-label" data-i18n="metricLost">Lost annually to inefficiency</div>
         </div>
         <div class="metric">
           <div class="metric-value">0</div>
-          <div class="metric-label">Servidores centrales requeridos</div>
+          <div class="metric-label" data-i18n="metricServers">Central servers required</div>
         </div>
       </div>
     </div>
@@ -993,28 +1011,28 @@
     <div class="container">
       <div class="problem-grid">
         <div>
-          <div class="section-label reveal">El Problema</div>
-          <h2 class="section-title reveal reveal-delay-1">La tierra produce.<br>La tecnologia <span style="color:var(--earth)">no llega.</span></h2>
-          <p class="section-subtitle reveal reveal-delay-2">
-            Los drones agricolas existen, pero vuelan solos. No se coordinan, no comparten datos, no escalan.
-            La agricultura de precision es un privilegio de los que tienen conectividad y capital.
+          <div class="section-label reveal" data-i18n="navProblem">The Problem</div>
+          <h2 class="section-title reveal reveal-delay-1" data-i18n="problemTitle">The land produces.<br>Technology <span style="color:var(--earth)">doesn't reach it.</span></h2>
+          <p class="section-subtitle reveal reveal-delay-2" data-i18n="problemSub">
+            Agricultural drones exist, but they fly alone. They don't coordinate, don't share data, don't scale.
+            Precision agriculture is a privilege of those with connectivity and capital.
           </p>
           <div class="problem-stats reveal reveal-delay-3" style="margin-top:40px">
             <div class="stat-card">
               <div class="stat-number">73%</div>
-              <div class="stat-desc">Agricultores LATAM sin acceso a tecnologia de precision</div>
+              <div class="stat-desc" data-i18n="stat1">LATAM farmers without access to precision technology</div>
             </div>
             <div class="stat-card">
               <div class="stat-number">2.4x</div>
-              <div class="stat-desc">Sobreuso de pesticidas por falta de datos en tiempo real</div>
+              <div class="stat-desc" data-i18n="stat2">Pesticide overuse due to lack of real-time data</div>
             </div>
             <div class="stat-card">
               <div class="stat-number">35%</div>
-              <div class="stat-desc">Agua desperdiciada en riego sin sensores coordinados</div>
+              <div class="stat-desc" data-i18n="stat3">Water wasted in irrigation without coordinated sensors</div>
             </div>
             <div class="stat-card">
               <div class="stat-number">1</div>
-              <div class="stat-desc">Punto unico de falla en sistemas centralizados</div>
+              <div class="stat-desc" data-i18n="stat4">Single point of failure in centralized systems</div>
             </div>
           </div>
         </div>
@@ -1028,27 +1046,27 @@
   <!-- SOLUTION -->
   <section class="solution" id="solution">
     <div class="container">
-      <div class="section-label reveal">La Solucion</div>
-      <h2 class="section-title reveal reveal-delay-1">BitTorrent para<br>la <span style="color:var(--green)">agricultura.</span></h2>
-      <p class="section-subtitle reveal reveal-delay-2">
-        Cada dron es un nodo autonomo. Juntos forman un enjambre inteligente que se auto-organiza,
-        comparte datos y actua colectivamente.
+      <div class="section-label reveal" data-i18n="navSolution">The Solution</div>
+      <h2 class="section-title reveal reveal-delay-1" data-i18n="solutionTitle">BitTorrent for<br><span style="color:var(--green)">agriculture.</span></h2>
+      <p class="section-subtitle reveal reveal-delay-2" data-i18n="solutionSub">
+        Each drone is an autonomous node. Together they form an intelligent swarm that self-organizes,
+        shares data and acts collectively.
       </p>
       <div class="solution-features">
         <div class="feature-card reveal">
           <div class="feature-icon green">&#9670;</div>
-          <h3>Descentralizado</h3>
-          <p>Sin servidor central, sin punto unico de falla. Los drones se descubren entre si via mDNS y forman una mesh P2P autonoma.</p>
+          <h3 data-i18n="feat1Title">Decentralized</h3>
+          <p data-i18n="feat1Desc">No central server, no single point of failure. Drones discover each other via mDNS and form an autonomous P2P mesh.</p>
         </div>
         <div class="feature-card reveal reveal-delay-1">
           <div class="feature-icon earth">&#9671;</div>
-          <h3>Inteligencia Colectiva</h3>
-          <p>Cada dron ejecuta modelos TinyML on-device. El enjambre comparte inferencias via MQTT para decisiones coordinadas en milisegundos.</p>
+          <h3 data-i18n="feat2Title">Collective Intelligence</h3>
+          <p data-i18n="feat2Desc">Each drone runs TinyML models on-device. The swarm shares inferences via MQTT for coordinated decisions in milliseconds.</p>
         </div>
         <div class="feature-card reveal reveal-delay-2">
           <div class="feature-icon mixed">&#9674;</div>
-          <h3>Edge-First</h3>
-          <p>Funciona 100% offline. Los datos se procesan donde se generan. Sincroniza con la nube cuando hay conectividad, no cuando la necesita.</p>
+          <h3 data-i18n="feat3Title">Edge-First</h3>
+          <p data-i18n="feat3Desc">Works 100% offline. Data is processed where it's generated. Syncs with the cloud when there's connectivity, not when it needs it.</p>
         </div>
       </div>
     </div>
@@ -1058,27 +1076,27 @@
   <section class="how-it-works" id="how">
     <div class="container">
       <div style="text-align:center">
-        <div class="section-label reveal">Proceso</div>
-        <h2 class="section-title reveal reveal-delay-1">Tres pasos.<br><span style="color:var(--green)">Cero complejidad.</span></h2>
+        <div class="section-label reveal" data-i18n="navProcess">Process</div>
+        <h2 class="section-title reveal reveal-delay-1" data-i18n="processTitle">Three steps.<br><span style="color:var(--green)">Zero complexity.</span></h2>
       </div>
       <div class="steps">
         <div class="step reveal">
           <div class="step-number">1</div>
           <div class="step-icon">&#128752;</div>
-          <h3>Desplegar</h3>
-          <p>Coloca los drones al borde del campo. Se auto-descubren via mesh P2P y particionan el terreno por consenso descentralizado.</p>
+          <h3 data-i18n="step1Title">Deploy</h3>
+          <p data-i18n="step1Desc">Place drones at the edge of the field. They self-discover via P2P mesh and partition the terrain by decentralized consensus.</p>
         </div>
         <div class="step reveal reveal-delay-1">
           <div class="step-number">2</div>
           <div class="step-icon">&#128257;</div>
-          <h3>Coordinar</h3>
-          <p>El enjambre comparte lecturas NDVI, humedad y deteccion de plagas en tiempo real. Las tareas se redistribuyen dinamicamente.</p>
+          <h3 data-i18n="step2Title">Coordinate</h3>
+          <p data-i18n="step2Desc">The swarm shares NDVI readings, humidity and pest detection in real time. Tasks are dynamically redistributed.</p>
         </div>
         <div class="step reveal reveal-delay-2">
           <div class="step-number">3</div>
           <div class="step-icon">&#127793;</div>
-          <h3>Actuar</h3>
-          <p>Fumigacion, siembra y monitoreo de precision ejecutados colectivamente. El dashboard muestra telemetria en vivo.</p>
+          <h3 data-i18n="step3Title">Act</h3>
+          <p data-i18n="step3Desc">Spraying, seeding and precision monitoring executed collectively. The dashboard shows live telemetry.</p>
         </div>
       </div>
     </div>
@@ -1086,15 +1104,15 @@
 
   <!-- SWARM VISUALIZATION -->
   <div class="swarm-viz">
-    <div class="section-label reveal">Visualizacion en Vivo</div>
-    <h2 class="section-title reveal reveal-delay-1" style="text-align:center">
-      Mira el <span style="color:var(--green)">enjambre</span> pensar.
+    <div class="section-label reveal" data-i18n="liveViz">Live Visualization</div>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center" data-i18n="vizTitle">
+      Watch the <span style="color:var(--green)">swarm</span> think.
     </h2>
     <canvas id="swarm-demo"></canvas>
     <div class="swarm-status reveal">
-      <div class="status-item"><span class="status-dot active"></span> 12 Drones activos</div>
-      <div class="status-item"><span class="status-dot syncing"></span> Sincronizando datos</div>
-      <div class="status-item"><span class="status-dot scanning"></span> Escaneando terreno</div>
+      <div class="status-item"><span class="status-dot active"></span> <span data-i18n="vizDrones">12 Active drones</span></div>
+      <div class="status-item"><span class="status-dot syncing"></span> <span data-i18n="vizSync">Syncing data</span></div>
+      <div class="status-item"><span class="status-dot scanning"></span> <span data-i18n="vizScan">Scanning terrain</span></div>
     </div>
   </div>
 
@@ -1102,8 +1120,8 @@
   <section class="use-cases" id="cases">
     <div class="container">
       <div style="text-align:center">
-        <div class="section-label reveal">Casos de Uso</div>
-        <h2 class="section-title reveal reveal-delay-1">Un protocolo.<br><span style="color:var(--earth)">Infinitas misiones.</span></h2>
+        <div class="section-label reveal" data-i18n="navCases">Use Cases</div>
+        <h2 class="section-title reveal reveal-delay-1" data-i18n="casesTitle">One protocol.<br><span style="color:var(--earth)">Infinite missions.</span></h2>
       </div>
       <div class="cases-grid">
         <div class="case-card reveal">
@@ -1111,9 +1129,9 @@
             <canvas class="case-canvas" data-case="agri"></canvas>
           </div>
           <div class="case-content">
-            <div class="case-tag">Agricultura</div>
-            <h3>Precision a Escala</h3>
-            <p>Fumigacion y monitoreo coordinado sobre miles de hectareas. Cero superposicion. Cero desperdicio. Cobertura total.</p>
+            <div class="case-tag" data-i18n="caseAgri">Agriculture</div>
+            <h3 data-i18n="case1Title">Precision at Scale</h3>
+            <p data-i18n="case1Desc">Coordinated spraying and monitoring across thousands of hectares. Zero overlap. Zero waste. Total coverage.</p>
           </div>
         </div>
         <div class="case-card reveal reveal-delay-1">
@@ -1121,9 +1139,9 @@
             <canvas class="case-canvas" data-case="logistics"></canvas>
           </div>
           <div class="case-content">
-            <div class="case-tag">Logistica</div>
-            <h3>Ultima Milla Rural</h3>
-            <p>Entrega coordinada de suministros en zonas sin infraestructura vial. El enjambre optimiza rutas en tiempo real.</p>
+            <div class="case-tag" data-i18n="caseLogistics">Logistics</div>
+            <h3 data-i18n="case2Title">Rural Last Mile</h3>
+            <p data-i18n="case2Desc">Coordinated supply delivery in areas without road infrastructure. The swarm optimizes routes in real time.</p>
           </div>
         </div>
         <div class="case-card reveal reveal-delay-2">
@@ -1131,9 +1149,9 @@
             <canvas class="case-canvas" data-case="rescue"></canvas>
           </div>
           <div class="case-content">
-            <div class="case-tag">Rescate</div>
-            <h3>Respuesta a Desastres</h3>
-            <p>Evaluacion post-huracan de danos en cultivos sobre terreno inundado o inaccesible. Cobertura masiva, cero riesgo humano.</p>
+            <div class="case-tag" data-i18n="caseRescue">Rescue</div>
+            <h3 data-i18n="case3Title">Disaster Response</h3>
+            <p data-i18n="case3Desc">Post-hurricane crop damage assessment over flooded or inaccessible terrain. Massive coverage, zero human risk.</p>
           </div>
         </div>
       </div>
@@ -1143,74 +1161,74 @@
   <!-- TECH STACK -->
   <section class="tech" id="tech">
     <div class="container">
-      <div class="section-label reveal">Stack Tecnico</div>
-      <h2 class="section-title reveal reveal-delay-1">Ingenieria sin<br><span style="color:var(--green)">compromisos.</span></h2>
+      <div class="section-label reveal" data-i18n="navStack">Tech Stack</div>
+      <h2 class="section-title reveal reveal-delay-1" data-i18n="techTitle">Engineering without<br><span style="color:var(--green)">compromise.</span></h2>
       <div class="tech-layout">
         <div class="tech-layers">
           <div class="tech-layer reveal">
             <div class="layer-icon edge">&#9881;</div>
             <div class="layer-info">
               <h4>Edge Runtime</h4>
-              <p>Rust + C++ &mdash; Control de vuelo y fusion de sensores en tiempo real</p>
+              <p data-i18n="techEdge">Rust + C++ &mdash; Real-time flight control and sensor fusion</p>
             </div>
           </div>
           <div class="tech-layer reveal reveal-delay-1">
             <div class="layer-icon ai">&#9733;</div>
             <div class="layer-info">
               <h4>Swarm Intelligence</h4>
-              <p>TinyML &mdash; Modelos on-device para planificacion de rutas y deteccion de anomalias</p>
+              <p data-i18n="techAI">TinyML &mdash; On-device models for route planning and anomaly detection</p>
             </div>
           </div>
           <div class="tech-layer reveal reveal-delay-2">
             <div class="layer-icon mesh">&#9672;</div>
             <div class="layer-info">
               <h4>P2P Mesh Network</h4>
-              <p>libp2p + MQTT + WebRTC &mdash; Comunicacion dron-a-dron sin infraestructura</p>
+              <p data-i18n="techMesh">libp2p + MQTT + WebRTC &mdash; Drone-to-drone communication without infrastructure</p>
             </div>
           </div>
           <div class="tech-layer reveal reveal-delay-3">
             <div class="layer-icon ui">&#9635;</div>
             <div class="layer-info">
               <h4>Dashboard</h4>
-              <p>React + Three.js + D3 &mdash; Visualizacion y control de mision en tiempo real</p>
+              <p data-i18n="techDash">React + Three.js + D3 &mdash; Real-time visualization and mission control</p>
             </div>
           </div>
           <div class="tech-layer reveal">
             <div class="layer-icon data">&#9636;</div>
             <div class="layer-info">
               <h4>Data Pipeline</h4>
-              <p>Edge-first con sync opcional &mdash; 100% operativo offline</p>
+              <p data-i18n="techData">Edge-first with optional sync &mdash; 100% operational offline</p>
             </div>
           </div>
         </div>
         <div class="tech-specs reveal">
-          <h3>Especificaciones</h3>
+          <h3 data-i18n="specsTitle">Specifications</h3>
           <div class="spec-row">
-            <span class="spec-label">Latencia de coordinacion</span>
+            <span class="spec-label" data-i18n="specLatency">Coordination latency</span>
             <span class="spec-value">&lt; 50ms</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Drones por enjambre</span>
-            <span class="spec-value">Hasta 256</span>
+            <span class="spec-label" data-i18n="specDrones">Drones per swarm</span>
+            <span class="spec-value" data-i18n="specDronesVal">Up to 256</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Rango mesh</span>
-            <span class="spec-value">2km dron-a-dron</span>
+            <span class="spec-label" data-i18n="specRange">Mesh range</span>
+            <span class="spec-value" data-i18n="specRangeVal">2km drone-to-drone</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Modelo ML on-device</span>
+            <span class="spec-label" data-i18n="specModel">On-device ML model</span>
             <span class="spec-value">&lt; 1MB</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Uptime sin cloud</span>
+            <span class="spec-label" data-i18n="specUptime">Uptime without cloud</span>
             <span class="spec-value">100%</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Cobertura por mision</span>
-            <span class="spec-value">500+ hectareas</span>
+            <span class="spec-label" data-i18n="specCoverage">Coverage per mission</span>
+            <span class="spec-value" data-i18n="specCoverageVal">500+ hectares</span>
           </div>
           <div class="spec-row">
-            <span class="spec-label">Protocolo</span>
+            <span class="spec-label" data-i18n="specProtocol">Protocol</span>
             <span class="spec-value">Open Source (MIT)</span>
           </div>
         </div>
@@ -1221,14 +1239,14 @@
   <!-- CTA -->
   <section class="cta-section" id="cta">
     <div class="cta-content">
-      <div class="section-label reveal">Unete</div>
-      <h2 class="reveal reveal-delay-1">El futuro de la<br>agricultura <span style="color:var(--green)">vuela en enjambre.</span></h2>
-      <p class="reveal reveal-delay-2">
-        Construimos el protocolo abierto que democratiza la agricultura de precision para toda Latinoamerica.
+      <div class="section-label reveal" data-i18n="ctaLabel">Join</div>
+      <h2 class="reveal reveal-delay-1" data-i18n="ctaTitle">The future of<br>agriculture <span style="color:var(--green)">flies in swarms.</span></h2>
+      <p class="reveal reveal-delay-2" data-i18n="ctaSub">
+        We're building the open protocol that democratizes precision agriculture for all of Latin America.
       </p>
       <div class="cta-buttons reveal reveal-delay-3">
-        <a href="https://dorahacks.io" class="btn-primary" target="_blank">Apoyar en DoraHacks &#8594;</a>
-        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank">Contribuir &#8599;</a>
+        <a href="https://dorahacks.io" class="btn-primary" target="_blank" data-i18n="ctaBtn1">Support on DoraHacks &#8594;</a>
+        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank" data-i18n="ctaBtn2">Contribute &#8599;</a>
       </div>
     </div>
   </section>
@@ -1567,12 +1585,13 @@
         });
 
         // Mode label
-        const labels = {
-          scatter: 'RECONOCIMIENTO',
-          grid: 'FORMACION',
-          sweep: 'BARRIDO',
-          converge: 'CONVERGENCIA'
+        const canvasLabels = {
+          en: { scatter: 'RECONNAISSANCE', grid: 'FORMATION', sweep: 'SWEEP', converge: 'CONVERGENCE', nodes: 'ACTIVE NODES' },
+          es: { scatter: 'RECONOCIMIENTO', grid: 'FORMACION', sweep: 'BARRIDO', converge: 'CONVERGENCIA', nodes: 'NODOS ACTIVOS' },
+          zh: { scatter: '\u4FA6\u5BDF', grid: '\u7F16\u961F', sweep: '\u626B\u63A0', converge: '\u6C47\u805A', nodes: '\u6D3B\u8DC3\u8282\u70B9' },
         };
+        const cLang = localStorage.getItem('enjambre-lang') || 'en';
+        const labels = canvasLabels[cLang] || canvasLabels.en;
         ctx.fillStyle = 'rgba(0,210,106,0.6)';
         ctx.font = '600 11px Inter, sans-serif';
         ctx.letterSpacing = '2px';
@@ -1582,7 +1601,7 @@
         ctx.fillStyle = 'rgba(139,148,158,0.5)';
         ctx.font = '500 11px Inter, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`${DRONE_COUNT} NODOS ACTIVOS`, w - margin, h - 30);
+        ctx.fillText(`${DRONE_COUNT} ${labels.nodes || 'ACTIVE NODES'}`, w - margin, h - 30);
         ctx.textAlign = 'left';
 
         requestAnimationFrame(draw);
@@ -1668,6 +1687,162 @@
         }
       });
     });
+
+    // ── i18n Multi-language support ──
+    const translations = {
+      en: {
+        navProblem:'Problem', navSolution:'Solution', navProcess:'Process', navCases:'Use Cases', navStack:'Tech Stack', navJoin:'Join the Swarm',
+        heroLine1:'Coordinate.', heroLine2:'Cultivate.', heroLine3:'Conquer.',
+        heroSub:'Decentralized swarm coordination for agricultural drones. No servers. No limits. Just collective intelligence flying over the land.',
+        heroAction:'See It In Action \u2192',
+        metricLand:"World's arable land in LATAM", metricLost:'Lost annually to inefficiency', metricServers:'Central servers required',
+        problemTitle:"The land produces.<br>Technology <span style=\"color:var(--earth)\">doesn't reach it.</span>",
+        problemSub:"Agricultural drones exist, but they fly alone. They don't coordinate, don't share data, don't scale. Precision agriculture is a privilege of those with connectivity and capital.",
+        stat1:'LATAM farmers without access to precision technology', stat2:'Pesticide overuse due to lack of real-time data',
+        stat3:'Water wasted in irrigation without coordinated sensors', stat4:'Single point of failure in centralized systems',
+        solutionTitle:'BitTorrent for<br><span style="color:var(--green)">agriculture.</span>',
+        solutionSub:'Each drone is an autonomous node. Together they form an intelligent swarm that self-organizes, shares data and acts collectively.',
+        feat1Title:'Decentralized', feat1Desc:'No central server, no single point of failure. Drones discover each other via mDNS and form an autonomous P2P mesh.',
+        feat2Title:'Collective Intelligence', feat2Desc:'Each drone runs TinyML models on-device. The swarm shares inferences via MQTT for coordinated decisions in milliseconds.',
+        feat3Title:'Edge-First', feat3Desc:"Works 100% offline. Data is processed where it's generated. Syncs with the cloud when there's connectivity, not when it needs it.",
+        processTitle:'Three steps.<br><span style="color:var(--green)">Zero complexity.</span>',
+        step1Title:'Deploy', step1Desc:'Place drones at the edge of the field. They self-discover via P2P mesh and partition the terrain by decentralized consensus.',
+        step2Title:'Coordinate', step2Desc:'The swarm shares NDVI readings, humidity and pest detection in real time. Tasks are dynamically redistributed.',
+        step3Title:'Act', step3Desc:'Spraying, seeding and precision monitoring executed collectively. The dashboard shows live telemetry.',
+        liveViz:'Live Visualization', vizTitle:'Watch the <span style="color:var(--green)">swarm</span> think.',
+        vizDrones:'12 Active drones', vizSync:'Syncing data', vizScan:'Scanning terrain',
+        casesTitle:'One protocol.<br><span style="color:var(--earth)">Infinite missions.</span>',
+        caseAgri:'Agriculture', case1Title:'Precision at Scale', case1Desc:'Coordinated spraying and monitoring across thousands of hectares. Zero overlap. Zero waste. Total coverage.',
+        caseLogistics:'Logistics', case2Title:'Rural Last Mile', case2Desc:'Coordinated supply delivery in areas without road infrastructure. The swarm optimizes routes in real time.',
+        caseRescue:'Rescue', case3Title:'Disaster Response', case3Desc:'Post-hurricane crop damage assessment over flooded or inaccessible terrain. Massive coverage, zero human risk.',
+        techTitle:'Engineering without<br><span style="color:var(--green)">compromise.</span>',
+        techEdge:'Rust + C++ \u2014 Real-time flight control and sensor fusion',
+        techAI:'TinyML \u2014 On-device models for route planning and anomaly detection',
+        techMesh:'libp2p + MQTT + WebRTC \u2014 Drone-to-drone communication without infrastructure',
+        techDash:'React + Three.js + D3 \u2014 Real-time visualization and mission control',
+        techData:'Edge-first with optional sync \u2014 100% operational offline',
+        specsTitle:'Specifications', specLatency:'Coordination latency', specDrones:'Drones per swarm', specDronesVal:'Up to 256',
+        specRange:'Mesh range', specRangeVal:'2km drone-to-drone', specModel:'On-device ML model', specUptime:'Uptime without cloud',
+        specCoverage:'Coverage per mission', specCoverageVal:'500+ hectares', specProtocol:'Protocol',
+        ctaLabel:'Join', ctaTitle:'The future of<br>agriculture <span style="color:var(--green)">flies in swarms.</span>',
+        ctaSub:"We're building the open protocol that democratizes precision agriculture for all of Latin America.",
+        ctaBtn1:'Support on DoraHacks \u2192', ctaBtn2:'Contribute \u2197',
+      },
+      es: {
+        navProblem:'Problema', navSolution:'Soluci\u00f3n', navProcess:'Proceso', navCases:'Casos de Uso', navStack:'Stack', navJoin:'Unirse al Enjambre',
+        heroLine1:'Coordina.', heroLine2:'Cultiva.', heroLine3:'Conquista.',
+        heroSub:'Coordinaci\u00f3n descentralizada de enjambres de drones agr\u00edcolas. Sin servidores. Sin l\u00edmites. Solo inteligencia colectiva volando sobre la tierra.',
+        heroAction:'Ver en Acci\u00f3n \u2192',
+        metricLand:'Tierra cultivable mundial en LATAM', metricLost:'Perdidos anualmente en ineficiencia', metricServers:'Servidores centrales requeridos',
+        problemTitle:'La tierra produce.<br>La tecnolog\u00eda <span style="color:var(--earth)">no llega.</span>',
+        problemSub:'Los drones agr\u00edcolas existen, pero vuelan solos. No se coordinan, no comparten datos, no escalan. La agricultura de precisi\u00f3n es un privilegio de los que tienen conectividad y capital.',
+        stat1:'Agricultores LATAM sin acceso a tecnolog\u00eda de precisi\u00f3n', stat2:'Sobreuso de pesticidas por falta de datos en tiempo real',
+        stat3:'Agua desperdiciada en riego sin sensores coordinados', stat4:'Punto \u00fanico de falla en sistemas centralizados',
+        solutionTitle:'BitTorrent para<br>la <span style="color:var(--green)">agricultura.</span>',
+        solutionSub:'Cada dron es un nodo aut\u00f3nomo. Juntos forman un enjambre inteligente que se auto-organiza, comparte datos y act\u00faa colectivamente.',
+        feat1Title:'Descentralizado', feat1Desc:'Sin servidor central, sin punto \u00fanico de falla. Los drones se descubren entre s\u00ed v\u00eda mDNS y forman una mesh P2P aut\u00f3noma.',
+        feat2Title:'Inteligencia Colectiva', feat2Desc:'Cada dron ejecuta modelos TinyML on-device. El enjambre comparte inferencias v\u00eda MQTT para decisiones coordinadas en milisegundos.',
+        feat3Title:'Edge-First', feat3Desc:'Funciona 100% offline. Los datos se procesan donde se generan. Sincroniza con la nube cuando hay conectividad, no cuando la necesita.',
+        processTitle:'Tres pasos.<br><span style="color:var(--green)">Cero complejidad.</span>',
+        step1Title:'Desplegar', step1Desc:'Coloca los drones al borde del campo. Se auto-descubren v\u00eda mesh P2P y particionan el terreno por consenso descentralizado.',
+        step2Title:'Coordinar', step2Desc:'El enjambre comparte lecturas NDVI, humedad y detecci\u00f3n de plagas en tiempo real. Las tareas se redistribuyen din\u00e1micamente.',
+        step3Title:'Actuar', step3Desc:'Fumigaci\u00f3n, siembra y monitoreo de precisi\u00f3n ejecutados colectivamente. El dashboard muestra telemetr\u00eda en vivo.',
+        liveViz:'Visualizaci\u00f3n en Vivo', vizTitle:'Mira el <span style="color:var(--green)">enjambre</span> pensar.',
+        vizDrones:'12 Drones activos', vizSync:'Sincronizando datos', vizScan:'Escaneando terreno',
+        casesTitle:'Un protocolo.<br><span style="color:var(--earth)">Infinitas misiones.</span>',
+        caseAgri:'Agricultura', case1Title:'Precisi\u00f3n a Escala', case1Desc:'Fumigaci\u00f3n y monitoreo coordinado sobre miles de hect\u00e1reas. Cero superposici\u00f3n. Cero desperdicio. Cobertura total.',
+        caseLogistics:'Log\u00edstica', case2Title:'\u00daltima Milla Rural', case2Desc:'Entrega coordinada de suministros en zonas sin infraestructura vial. El enjambre optimiza rutas en tiempo real.',
+        caseRescue:'Rescate', case3Title:'Respuesta a Desastres', case3Desc:'Evaluaci\u00f3n post-hurac\u00e1n de da\u00f1os en cultivos sobre terreno inundado o inaccesible. Cobertura masiva, cero riesgo humano.',
+        techTitle:'Ingenier\u00eda sin<br><span style="color:var(--green)">compromisos.</span>',
+        techEdge:'Rust + C++ \u2014 Control de vuelo y fusi\u00f3n de sensores en tiempo real',
+        techAI:'TinyML \u2014 Modelos on-device para planificaci\u00f3n de rutas y detecci\u00f3n de anomal\u00edas',
+        techMesh:'libp2p + MQTT + WebRTC \u2014 Comunicaci\u00f3n dron-a-dron sin infraestructura',
+        techDash:'React + Three.js + D3 \u2014 Visualizaci\u00f3n y control de misi\u00f3n en tiempo real',
+        techData:'Edge-first con sync opcional \u2014 100% operativo offline',
+        specsTitle:'Especificaciones', specLatency:'Latencia de coordinaci\u00f3n', specDrones:'Drones por enjambre', specDronesVal:'Hasta 256',
+        specRange:'Rango mesh', specRangeVal:'2km dron-a-dron', specModel:'Modelo ML on-device', specUptime:'Uptime sin cloud',
+        specCoverage:'Cobertura por misi\u00f3n', specCoverageVal:'500+ hect\u00e1reas', specProtocol:'Protocolo',
+        ctaLabel:'\u00danete', ctaTitle:'El futuro de la<br>agricultura <span style="color:var(--green)">vuela en enjambre.</span>',
+        ctaSub:'Construimos el protocolo abierto que democratiza la agricultura de precisi\u00f3n para toda Latinoam\u00e9rica.',
+        ctaBtn1:'Apoyar en DoraHacks \u2192', ctaBtn2:'Contribuir \u2197',
+      },
+      zh: {
+        navProblem:'\u95EE\u9898', navSolution:'\u89E3\u51B3\u65B9\u6848', navProcess:'\u6D41\u7A0B', navCases:'\u7528\u4F8B', navStack:'\u6280\u672F\u6808', navJoin:'\u52A0\u5165\u96C6\u7FA4',
+        heroLine1:'\u534F\u8C03\u3002', heroLine2:'\u57F9\u80B2\u3002', heroLine3:'\u5F81\u670D\u3002',
+        heroSub:'\u519C\u4E1A\u65E0\u4EBA\u673A\u7684\u53BB\u4E2D\u5FC3\u5316\u96C6\u7FA4\u534F\u8C03\u3002\u65E0\u670D\u52A1\u5668\u3002\u65E0\u9650\u5236\u3002\u53EA\u6709\u96C6\u4F53\u667A\u6167\u98DE\u8D8A\u5927\u5730\u3002',
+        heroAction:'\u67E5\u770B\u6F14\u793A \u2192',
+        metricLand:'\u62C9\u4E01\u7F8E\u6D32\u5168\u7403\u8015\u5730\u5360\u6BD4', metricLost:'\u6BCF\u5E74\u56E0\u4F4E\u6548\u800C\u635F\u5931', metricServers:'\u6240\u9700\u4E2D\u5FC3\u670D\u52A1\u5668',
+        problemTitle:'\u571F\u5730\u5728\u751F\u4EA7\u3002<br>\u6280\u672F<span style="color:var(--earth)">\u65E0\u6CD5\u89E6\u53CA\u3002</span>',
+        problemSub:'\u519C\u4E1A\u65E0\u4EBA\u673A\u5DF2\u7ECF\u5B58\u5728\uFF0C\u4F46\u5B83\u4EEC\u5355\u72EC\u98DE\u884C\u3002\u4E0D\u534F\u8C03\u3001\u4E0D\u5171\u4EAB\u6570\u636E\u3001\u4E0D\u53EF\u6269\u5C55\u3002\u7CBE\u51C6\u519C\u4E1A\u662F\u62E5\u6709\u8FDE\u63A5\u548C\u8D44\u672C\u7684\u4EBA\u7684\u7279\u6743\u3002',
+        stat1:'\u62C9\u7F8E\u519C\u6C11\u65E0\u6CD5\u83B7\u5F97\u7CBE\u51C6\u6280\u672F', stat2:'\u56E0\u7F3A\u4E4F\u5B9E\u65F6\u6570\u636E\u800C\u8FC7\u5EA6\u4F7F\u7528\u519C\u836F',
+        stat3:'\u65E0\u534F\u8C03\u4F20\u611F\u5668\u7684\u7048\u6E89\u6D6A\u8D39\u7684\u6C34', stat4:'\u4E2D\u5FC3\u5316\u7CFB\u7EDF\u7684\u5355\u70B9\u6545\u969C',
+        solutionTitle:'BitTorrent<br>\u7528\u4E8E<span style="color:var(--green)">\u519C\u4E1A\u3002</span>',
+        solutionSub:'\u6BCF\u67B6\u65E0\u4EBA\u673A\u90FD\u662F\u4E00\u4E2A\u81EA\u4E3B\u8282\u70B9\u3002\u5B83\u4EEC\u5171\u540C\u5F62\u6210\u4E00\u4E2A\u667A\u80FD\u96C6\u7FA4\uFF0C\u81EA\u7EC4\u7EC7\u3001\u5171\u4EAB\u6570\u636E\u5E76\u96C6\u4F53\u884C\u52A8\u3002',
+        feat1Title:'\u53BB\u4E2D\u5FC3\u5316', feat1Desc:'\u65E0\u4E2D\u5FC3\u670D\u52A1\u5668\uFF0C\u65E0\u5355\u70B9\u6545\u969C\u3002\u65E0\u4EBA\u673A\u901A\u8FC7mDNS\u76F8\u4E92\u53D1\u73B0\u5E76\u5F62\u6210\u81EA\u4E3B P2P\u7F51\u7EDC\u3002',
+        feat2Title:'\u96C6\u4F53\u667A\u6167', feat2Desc:'\u6BCF\u67B6\u65E0\u4EBA\u673A\u8FD0\u884CTinyML\u6A21\u578B\u3002\u96C6\u7FA4\u901A\u8FC7MQTT\u5171\u4EAB\u63A8\u7406\u7ED3\u679C\uFF0C\u6BEB\u79D2\u7EA7\u534F\u8C03\u51B3\u7B56\u3002',
+        feat3Title:'\u8FB9\u7F18\u4F18\u5148', feat3Desc:'\u5B8C\u5168\u79BB\u7EBF\u8FD0\u884C\u3002\u6570\u636E\u5728\u4EA7\u751F\u5730\u5904\u7406\u3002\u6709\u8FDE\u63A5\u65F6\u540C\u6B65\u4E91\u7AEF\uFF0C\u800C\u4E0D\u662F\u9700\u8981\u65F6\u624D\u540C\u6B65\u3002',
+        processTitle:'\u4E09\u4E2A\u6B65\u9AA4\u3002<br><span style="color:var(--green)">\u96F6\u590D\u6742\u6027\u3002</span>',
+        step1Title:'\u90E8\u7F72', step1Desc:'\u5C06\u65E0\u4EBA\u673A\u653E\u5728\u7530\u5730\u8FB9\u7F18\u3002\u5B83\u4EEC\u901A\u8FC7P2P\u7F51\u7EDC\u81EA\u52A8\u53D1\u73B0\u5E76\u901A\u8FC7\u53BB\u4E2D\u5FC3\u5316\u5171\u8BC6\u5206\u5272\u5730\u5F62\u3002',
+        step2Title:'\u534F\u8C03', step2Desc:'\u96C6\u7FA4\u5B9E\u65F6\u5171\u4EABNDVI\u8BFB\u6570\u3001\u6E7F\u5EA6\u548C\u75C5\u866B\u5BB3\u68C0\u6D4B\u3002\u4EFB\u52A1\u52A8\u6001\u91CD\u65B0\u5206\u914D\u3002',
+        step3Title:'\u884C\u52A8', step3Desc:'\u96C6\u4F53\u6267\u884C\u55B7\u6D12\u3001\u64AD\u79CD\u548C\u7CBE\u51C6\u76D1\u63A7\u3002\u4EEA\u8868\u677F\u663E\u793A\u5B9E\u65F6\u9065\u6D4B\u3002',
+        liveViz:'\u5B9E\u65F6\u53EF\u89C6\u5316', vizTitle:'\u89C2\u770B<span style="color:var(--green)">\u96C6\u7FA4</span>\u601D\u8003\u3002',
+        vizDrones:'12\u67B6\u6D3B\u8DC3\u65E0\u4EBA\u673A', vizSync:'\u6570\u636E\u540C\u6B65\u4E2D', vizScan:'\u5730\u5F62\u626B\u63CF\u4E2D',
+        casesTitle:'\u4E00\u4E2A\u534F\u8BAE\u3002<br><span style="color:var(--earth)">\u65E0\u9650\u4EFB\u52A1\u3002</span>',
+        caseAgri:'\u519C\u4E1A', case1Title:'\u89C4\u6A21\u5316\u7CBE\u51C6', case1Desc:'\u5728\u6570\u5343\u516C\u9877\u8303\u56F4\u5185\u534F\u8C03\u55B7\u6D12\u548C\u76D1\u63A7\u3002\u96F6\u91CD\u53E0\u3002\u96F6\u6D6A\u8D39\u3002\u5168\u9762\u8986\u76D6\u3002',
+        caseLogistics:'\u7269\u6D41', case2Title:'\u519C\u6751\u6700\u540E\u4E00\u516C\u91CC', case2Desc:'\u5728\u65E0\u9053\u8DEF\u57FA\u7840\u8BBE\u65BD\u7684\u5730\u533A\u534F\u8C03\u4F9B\u5E94\u4EA4\u4ED8\u3002\u96C6\u7FA4\u5B9E\u65F6\u4F18\u5316\u8DEF\u7EBF\u3002',
+        caseRescue:'\u6551\u63F4', case3Title:'\u707E\u5BB3\u54CD\u5E94', case3Desc:'\u5728\u6D2A\u6C34\u6216\u65E0\u6CD5\u8FDB\u5165\u7684\u5730\u5F62\u4E0A\u8FDB\u884C\u98D3\u540E\u4F5C\u7269\u635F\u5BB3\u8BC4\u4F30\u3002\u5927\u89C4\u6A21\u8986\u76D6\uFF0C\u96F6\u4EBA\u5458\u98CE\u9669\u3002',
+        techTitle:'\u5DE5\u7A0B<br>\u65E0<span style="color:var(--green)">\u59A5\u534F\u3002</span>',
+        techEdge:'Rust + C++ \u2014 \u5B9E\u65F6\u98DE\u884C\u63A7\u5236\u548C\u4F20\u611F\u5668\u878D\u5408',
+        techAI:'TinyML \u2014 \u7528\u4E8E\u8DEF\u5F84\u89C4\u5212\u548C\u5F02\u5E38\u68C0\u6D4B\u7684\u8BBE\u5907\u7AEF\u6A21\u578B',
+        techMesh:'libp2p + MQTT + WebRTC \u2014 \u65E0\u57FA\u7840\u8BBE\u65BD\u7684\u65E0\u4EBA\u673A\u5BF9\u65E0\u4EBA\u673A\u901A\u4FE1',
+        techDash:'React + Three.js + D3 \u2014 \u5B9E\u65F6\u53EF\u89C6\u5316\u548C\u4EFB\u52A1\u63A7\u5236',
+        techData:'\u8FB9\u7F18\u4F18\u5148\uFF0C\u53EF\u9009\u540C\u6B65 \u2014 100%\u79BB\u7EBF\u8FD0\u884C',
+        specsTitle:'\u89C4\u683C', specLatency:'\u534F\u8C03\u5EF6\u8FDF', specDrones:'\u6BCF\u4E2A\u96C6\u7FA4\u65E0\u4EBA\u673A\u6570', specDronesVal:'\u6700\u591A256\u67B6',
+        specRange:'\u7F51\u7EDC\u8303\u56F4', specRangeVal:'2\u516C\u91CC\u65E0\u4EBA\u673A\u5BF9\u65E0\u4EBA\u673A', specModel:'\u8BBE\u5907\u7AEML\u6A21\u578B', specUptime:'\u65E0\u4E91\u6B63\u5E38\u8FD0\u884C\u65F6\u95F4',
+        specCoverage:'\u6BCF\u6B21\u4EFB\u52A1\u8986\u76D6', specCoverageVal:'500+\u516C\u9877', specProtocol:'\u534F\u8BAE',
+        ctaLabel:'\u52A0\u5165', ctaTitle:'\u519C\u4E1A\u7684\u672A\u6765<br><span style="color:var(--green)">\u4EE5\u96C6\u7FA4\u65B9\u5F0F\u98DE\u884C\u3002</span>',
+        ctaSub:'\u6211\u4EEC\u6B63\u5728\u6784\u5EFA\u4E00\u4E2A\u5F00\u653E\u534F\u8BAE\uFF0C\u4E3A\u6574\u4E2A\u62C9\u4E01\u7F8E\u6D32\u5B9E\u73B0\u7CBE\u51C6\u519C\u4E1A\u6C11\u4E3B\u5316\u3002',
+        ctaBtn1:'\u5728DoraHacks\u4E0A\u652F\u6301 \u2192', ctaBtn2:'\u8D21\u732E \u2197',
+      }
+    };
+
+    let currentLang = localStorage.getItem('enjambre-lang') || 'en';
+
+    function applyTranslations(lang) {
+      currentLang = lang;
+      localStorage.setItem('enjambre-lang', lang);
+      const t = translations[lang] || translations.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) {
+          if (t[key].includes('<')) { el.innerHTML = t[key]; }
+          else { el.textContent = t[key]; }
+        }
+      });
+      const btn = document.getElementById('langBtn');
+      if (btn) btn.innerHTML = '\ud83c\udf10 ' + lang.toUpperCase();
+      document.querySelectorAll('.lang-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.lang === lang);
+      });
+    }
+
+    function toggleLangDropdown() {
+      document.getElementById('langDropdown').classList.toggle('show');
+    }
+
+    function setLang(lang) {
+      applyTranslations(lang);
+      document.getElementById('langDropdown').classList.remove('show');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.lang-selector')) {
+        const dd = document.getElementById('langDropdown');
+        if (dd) dd.classList.remove('show');
+      }
+    });
+
+    applyTranslations(currentLang);
   </script>
 </body>
 </html>

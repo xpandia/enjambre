@@ -1,5 +1,5 @@
 # ENJAMBRE
-## Coordina. Cultiva. Conquista.
+## Coordinate. Cultivate. Conquer.
 ### The Vertex Swarm Challenge 2026
 
 ---
@@ -114,9 +114,9 @@ We do not sell drones. We sell *intelligence*.
 
 | Tier | Monthly Price (USD) | Fleet Size | Includes |
 |---|---|---|---|
-| **Semilla** (Seed) | $499 | Up to 5 drones | SwarmOS + CultivaAI basic + 10K hectares/month |
-| **Cosecha** (Harvest) | $1,499 | Up to 20 drones | Full platform + priority support + API access |
-| **Hacienda** (Estate) | $4,999 | Unlimited | White-label + custom models + dedicated success manager |
+| **Seed** | $499 | Up to 5 drones | SwarmOS + CultivaAI basic + 10K hectares/month |
+| **Harvest** | $1,499 | Up to 20 drones | Full platform + priority support + API access |
+| **Estate** | $4,999 | Unlimited | White-label + custom models + dedicated success manager |
 
 **Additional revenue streams:**
 - Per-scan overage fees ($0.12/hectare beyond plan)
@@ -189,7 +189,7 @@ We are not tourists in agriculture. We grew up in these fields. We know the dirt
 
 > "We are not asking you to bet on a technology. We are asking you to bet on the people who feed a continent."
 
-**Coordina. Cultiva. Conquista.**
+**Coordinate. Cultivate. Conquer.**
 
 enjambre.ag | team@enjambre.ag
 

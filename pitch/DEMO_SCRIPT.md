@@ -107,7 +107,7 @@
 
 **Beat.**
 
-> "Coordina. Cultiva. Conquista."
+> "Coordinate. Cultivate. Conquer."
 
 > "Thank you."
 

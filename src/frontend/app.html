@@ -181,6 +181,16 @@ a{color:var(--green);text-decoration:none}
 .formation-selector{display:flex;gap:6px}
 .formation-btn{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;transition:.15s}
 .formation-btn.active,.formation-btn:hover{border-color:var(--green);color:var(--green);background:rgba(0,210,106,.1)}
+
+/* ── Language Selector ── */
+.lang-selector{position:relative;display:flex;align-items:center}
+.lang-btn{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:11px;color:var(--text2);transition:.15s;font-family:inherit}
+.lang-btn:hover{border-color:var(--green);color:var(--text)}
+.lang-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:300;min-width:150px;display:none;overflow:hidden}
+.lang-dropdown.show{display:block}
+.lang-option{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:12px;cursor:pointer;color:var(--text2);transition:.15s}
+.lang-option:hover{background:var(--bg3);color:var(--text)}
+.lang-option.active{color:var(--green);background:rgba(0,210,106,.08)}
 </style>
 </head>
 <body>
@@ -188,12 +198,12 @@ a{color:var(--green);text-decoration:none}
   <!-- Sidebar -->
   <nav class="sidebar">
     <div class="logo" title="Enjambre">&#x1F41D;</div>
-    <button class="nav-btn active" data-tab="map" title="Map"><span>&#x1F5FA;</span><span class="tooltip">Map / Mapa</span></button>
-    <button class="nav-btn" data-tab="fleet" title="Fleet"><span>&#x1F681;</span><span class="tooltip">Fleet / Flota</span></button>
-    <button class="nav-btn" data-tab="missions" title="Missions"><span>&#x1F4CB;</span><span class="tooltip">Missions / Misiones</span></button>
-    <button class="nav-btn" data-tab="telemetry" title="Telemetry"><span>&#x1F4E1;</span><span class="tooltip">Telemetry / Telemetr&iacute;a</span></button>
-    <button class="nav-btn" data-tab="analytics" title="Analytics"><span>&#x1F4CA;</span><span class="tooltip">Analytics / An&aacute;lisis</span></button>
-    <button class="nav-btn" data-tab="settings" title="Settings"><span>&#x2699;</span><span class="tooltip">Settings / Ajustes</span></button>
+    <button class="nav-btn active" data-tab="map" title="Map"><span>&#x1F5FA;</span><span class="tooltip" data-i18n="navMap">Map</span></button>
+    <button class="nav-btn" data-tab="fleet" title="Fleet"><span>&#x1F681;</span><span class="tooltip" data-i18n="navFleet">Fleet</span></button>
+    <button class="nav-btn" data-tab="missions" title="Missions"><span>&#x1F4CB;</span><span class="tooltip" data-i18n="navMissions">Missions</span></button>
+    <button class="nav-btn" data-tab="telemetry" title="Telemetry"><span>&#x1F4E1;</span><span class="tooltip" data-i18n="navTelemetry">Telemetry</span></button>
+    <button class="nav-btn" data-tab="analytics" title="Analytics"><span>&#x1F4CA;</span><span class="tooltip" data-i18n="navAnalytics">Analytics</span></button>
+    <button class="nav-btn" data-tab="settings" title="Settings"><span>&#x2699;</span><span class="tooltip" data-i18n="navSettings">Settings</span></button>
     <div class="spacer"></div>
     <div class="status-dot" id="statusDot" title="API Connected"></div>
   </nav>
@@ -206,8 +216,16 @@ a{color:var(--green);text-decoration:none}
       <div class="badge" id="fleetBadge">0 Drones</div>
       <div class="badge" id="missionBadge">0 Active</div>
       <div class="spacer"></div>
-      <div class="conn"><div class="dot ok" id="connDot"></div><span id="connLabel">Connected</span></div>
+      <div class="conn"><div class="dot ok" id="connDot"></div><span id="connLabel" data-i18n="connected">Connected</span></div>
       <div class="clock" id="clock"></div>
+      <div class="lang-selector">
+        <button class="lang-btn" id="langBtn" onclick="toggleLangDropdown()">&#127760; EN</button>
+        <div class="lang-dropdown" id="langDropdown">
+          <div class="lang-option active" data-lang="en" onclick="setLang('en')">&#127468;&#127463; English</div>
+          <div class="lang-option" data-lang="es" onclick="setLang('es')">&#127466;&#127480; Espa&ntilde;ol</div>
+          <div class="lang-option" data-lang="zh" onclick="setLang('zh')">&#127464;&#127475; &#20013;&#25991;</div>
+        </div>
+      </div>
     </header>
 
     <!-- Content -->
@@ -217,27 +235,27 @@ a{color:var(--green);text-decoration:none}
       <div class="tab-panel active" id="tab-map">
         <div class="map-overlay">
           <div class="info-card">
-            <div class="label">Formation / Formaci&oacute;n</div>
+            <div class="label" data-i18n="formation">Formation</div>
             <div class="value" id="mapFormation" style="font-size:14px">GRID</div>
           </div>
           <div class="info-card">
-            <div class="label">Active Drones / Drones Activos</div>
+            <div class="label" data-i18n="activeDrones">Active Drones</div>
             <div class="value" id="mapActiveDrones">0</div>
           </div>
           <div class="info-card">
-            <div class="label">Mesh Connectivity / Conectividad</div>
+            <div class="label" data-i18n="meshConn">Mesh Connectivity</div>
             <div class="value earth" id="mapMesh">--</div>
           </div>
         </div>
 
         <div class="map-legend">
-          <h4>Legend / Leyenda</h4>
-          <div class="item"><div class="dot" style="background:var(--green)"></div> Idle / Inactivo</div>
-          <div class="item"><div class="dot" style="background:var(--cyan)"></div> Armed / Armado</div>
-          <div class="item"><div class="dot" style="background:var(--blue)"></div> Flying / Volando</div>
-          <div class="item"><div class="dot" style="background:var(--orange)"></div> Returning / Regresando</div>
-          <div class="item"><div class="dot" style="background:var(--red)"></div> Fault / Falla</div>
-          <div class="item"><div class="dot" style="background:var(--earth)"></div> Mission Area / Zona</div>
+          <h4 data-i18n="legend">Legend</h4>
+          <div class="item"><div class="dot" style="background:var(--green)"></div> <span data-i18n="statusIdle">Idle</span></div>
+          <div class="item"><div class="dot" style="background:var(--cyan)"></div> <span data-i18n="statusArmed">Armed</span></div>
+          <div class="item"><div class="dot" style="background:var(--blue)"></div> <span data-i18n="statusFlying">Flying</span></div>
+          <div class="item"><div class="dot" style="background:var(--orange)"></div> <span data-i18n="statusReturning">Returning</span></div>
+          <div class="item"><div class="dot" style="background:var(--red)"></div> <span data-i18n="statusFault">Fault</span></div>
+          <div class="item"><div class="dot" style="background:var(--earth)"></div> <span data-i18n="missionArea">Mission Area</span></div>
         </div>
 
         <canvas id="mapCanvas"></canvas>
@@ -273,7 +291,7 @@ a{color:var(--green);text-decoration:none}
       <div class="tab-panel" id="tab-fleet">
         <div class="fleet-container">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="font-size:18px">Fleet Management <span style="color:var(--text2);font-weight:400">/ Gesti&oacute;n de Flota</span></h2>
+            <h2 style="font-size:18px" data-i18n="fleetMgmt">Fleet Management</h2>
             <button class="btn primary" id="btnRegisterDrone">+ Register Drone</button>
           </div>
           <div class="fleet-summary" id="fleetSummary"></div>
@@ -285,9 +303,9 @@ a{color:var(--green);text-decoration:none}
       <div class="tab-panel" id="tab-missions">
         <div class="missions-container">
           <div class="mission-create">
-            <h3>Create Mission / Crear Misi&oacute;n</h3>
+            <h3 data-i18n="createMission">Create Mission</h3>
             <div class="form-grid">
-              <div class="form-group"><label>Mission Name</label><input id="missionName" value="Escaneo NDVI"></div>
+              <div class="form-group"><label>Mission Name</label><input id="missionName" value="NDVI Scan"></div>
               <div class="form-group"><label>Area</label><select id="missionArea"></select></div>
               <div class="form-group"><label>Formation</label>
                 <select id="missionFormation">
@@ -312,16 +330,16 @@ a{color:var(--green);text-decoration:none}
       <div class="tab-panel" id="tab-telemetry">
         <div class="telemetry-container">
           <div class="telemetry-header">
-            <h2 style="font-size:18px">Telemetry <span style="color:var(--text2);font-weight:400">/ Telemetr&iacute;a</span></h2>
+            <h2 style="font-size:18px" data-i18n="navTelemetry">Telemetry</h2>
             <select id="telemetryDrone" class="btn" style="min-width:160px"></select>
             <div class="conn" id="wsStatus"><div class="dot ok" id="wsDot"></div><span id="wsLabel">WS Connected</span></div>
           </div>
           <div class="chart-grid">
-            <div class="chart-card"><h4>Battery / Bater&iacute;a</h4><canvas id="chartBattery"></canvas></div>
-            <div class="chart-card"><h4>Altitude / Altitud</h4><canvas id="chartAltitude"></canvas></div>
-            <div class="chart-card"><h4>Speed / Velocidad</h4><canvas id="chartSpeed"></canvas></div>
+            <div class="chart-card"><h4 data-i18n="battery">Battery</h4><canvas id="chartBattery"></canvas></div>
+            <div class="chart-card"><h4 data-i18n="altitude">Altitude</h4><canvas id="chartAltitude"></canvas></div>
+            <div class="chart-card"><h4 data-i18n="speed">Speed</h4><canvas id="chartSpeed"></canvas></div>
             <div class="chart-card">
-              <h4>Signal & GPS / Se&ntilde;al y GPS</h4>
+              <h4 data-i18n="signalGPS">Signal & GPS</h4>
               <div class="gauge">
                 <div class="gauge-ring" id="signalGauge"><div class="val" id="signalVal">--</div></div>
                 <div style="font-size:11px;color:var(--text2)">Signal Strength</div>
@@ -335,15 +353,15 @@ a{color:var(--green);text-decoration:none}
       <!-- ANALYTICS TAB -->
       <div class="tab-panel" id="tab-analytics">
         <div class="analytics-container">
-          <h2 style="font-size:18px;margin-bottom:16px">Analytics <span style="color:var(--text2);font-weight:400">/ An&aacute;lisis</span></h2>
+          <h2 style="font-size:18px;margin-bottom:16px" data-i18n="navAnalytics">Analytics</h2>
           <div class="analytics-grid" id="analyticsGrid"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
             <div class="conflict-log" id="conflictLog">
-              <h4>Collision Avoidance Events / Eventos de Evasi&oacute;n</h4>
+              <h4 data-i18n="collisionEvents">Collision Avoidance Events</h4>
               <div id="conflictList"><p style="color:var(--text3);font-size:12px">No conflicts detected</p></div>
             </div>
             <div class="mesh-card" id="meshCard">
-              <h4>Mesh Network / Red Mesh</h4>
+              <h4 data-i18n="meshNetwork">Mesh Network</h4>
               <canvas id="meshCanvas" style="width:100%;height:200px"></canvas>
             </div>
           </div>
@@ -353,9 +371,9 @@ a{color:var(--green);text-decoration:none}
       <!-- SETTINGS TAB -->
       <div class="tab-panel" id="tab-settings">
         <div class="settings-container">
-          <h2 style="font-size:18px;margin-bottom:16px">Settings <span style="color:var(--text2);font-weight:400">/ Ajustes</span></h2>
+          <h2 style="font-size:18px;margin-bottom:16px" data-i18n="navSettings">Settings</h2>
           <div class="settings-group">
-            <h3>Connection / Conexi&oacute;n</h3>
+            <h3 data-i18n="connection">Connection</h3>
             <div class="setting-row">
               <div><div class="slabel">API Endpoint</div><div class="sdesc">Backend URL</div></div>
               <input id="settingApi" value="http://localhost:8000" style="width:220px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px">
@@ -366,7 +384,7 @@ a{color:var(--green);text-decoration:none}
             </div>
           </div>
           <div class="settings-group">
-            <h3>Display / Visualizaci&oacute;n</h3>
+            <h3 data-i18n="display">Display</h3>
             <div class="setting-row">
               <div><div class="slabel">Show Mesh Lines</div><div class="sdesc">Draw P2P connections</div></div>
               <button class="toggle on" id="toggleMesh" onclick="this.classList.toggle('on')"></button>
@@ -381,7 +399,7 @@ a{color:var(--green);text-decoration:none}
             </div>
           </div>
           <div class="settings-group">
-            <h3>About / Acerca de</h3>
+            <h3 data-i18n="about">About</h3>
             <p style="font-size:13px;color:var(--text2);line-height:1.6">
               <strong style="color:var(--green)">Enjambre v1.0</strong><br>
               Decentralized Drone Swarm Coordination for Agriculture.<br>
@@ -399,7 +417,7 @@ a{color:var(--green);text-decoration:none}
 <!-- Register Drone Modal -->
 <div class="modal-overlay" id="registerModal">
   <div class="modal">
-    <h3>Register Drone / Registrar Dron</h3>
+    <h3 data-i18n="registerDrone">Register Drone</h3>
     <div class="form-group"><label>Name / Nombre</label><input id="regName" placeholder="e.g. Halcon-6"></div>
     <div class="form-group"><label>Latitude</label><input id="regLat" type="number" step="0.0001" value="4.711"></div>
     <div class="form-group"><label>Longitude</label><input id="regLon" type="number" step="0.0001" value="-74.072"></div>
@@ -419,6 +437,56 @@ a{color:var(--green);text-decoration:none}
 
 const API = () => document.getElementById('settingApi').value || 'http://localhost:8000';
 const POLL = () => parseInt(document.getElementById('settingPoll').value) || 2000;
+
+// ── i18n Multi-language support ──
+const i18n = {
+  en: {
+    navMap:'Map', navFleet:'Fleet', navMissions:'Missions', navTelemetry:'Telemetry', navAnalytics:'Analytics', navSettings:'Settings',
+    connected:'Connected', formation:'Formation', activeDrones:'Active Drones', meshConn:'Mesh Connectivity',
+    legend:'Legend', statusIdle:'Idle', statusArmed:'Armed', statusFlying:'Flying', statusReturning:'Returning', statusFault:'Fault', missionArea:'Mission Area',
+    fleetMgmt:'Fleet Management', createMission:'Create Mission', battery:'Battery', altitude:'Altitude', speed:'Speed', signalGPS:'Signal & GPS',
+    collisionEvents:'Collision Avoidance Events', meshNetwork:'Mesh Network',
+    connection:'Connection', display:'Display', about:'About', registerDrone:'Register Drone',
+  },
+  es: {
+    navMap:'Mapa', navFleet:'Flota', navMissions:'Misiones', navTelemetry:'Telemetr\u00eda', navAnalytics:'An\u00e1lisis', navSettings:'Ajustes',
+    connected:'Conectado', formation:'Formaci\u00f3n', activeDrones:'Drones Activos', meshConn:'Conectividad Mesh',
+    legend:'Leyenda', statusIdle:'Inactivo', statusArmed:'Armado', statusFlying:'Volando', statusReturning:'Regresando', statusFault:'Falla', missionArea:'Zona de Misi\u00f3n',
+    fleetMgmt:'Gesti\u00f3n de Flota', createMission:'Crear Misi\u00f3n', battery:'Bater\u00eda', altitude:'Altitud', speed:'Velocidad', signalGPS:'Se\u00f1al y GPS',
+    collisionEvents:'Eventos de Evasi\u00f3n de Colisi\u00f3n', meshNetwork:'Red Mesh',
+    connection:'Conexi\u00f3n', display:'Visualizaci\u00f3n', about:'Acerca de', registerDrone:'Registrar Dron',
+  },
+  zh: {
+    navMap:'\u5730\u56FE', navFleet:'\u673A\u961F', navMissions:'\u4EFB\u52A1', navTelemetry:'\u9065\u6D4B', navAnalytics:'\u5206\u6790', navSettings:'\u8BBE\u7F6E',
+    connected:'\u5DF2\u8FDE\u63A5', formation:'\u7F16\u961F', activeDrones:'\u6D3B\u8DC3\u65E0\u4EBA\u673A', meshConn:'\u7F51\u7EDC\u8FDE\u63A5',
+    legend:'\u56FE\u4F8B', statusIdle:'\u7A7A\u95F2', statusArmed:'\u5C31\u7EEA', statusFlying:'\u98DE\u884C\u4E2D', statusReturning:'\u8FD4\u822A', statusFault:'\u6545\u969C', missionArea:'\u4EFB\u52A1\u533A\u57DF',
+    fleetMgmt:'\u673A\u961F\u7BA1\u7406', createMission:'\u521B\u5EFA\u4EFB\u52A1', battery:'\u7535\u6C60', altitude:'\u6D77\u62D4', speed:'\u901F\u5EA6', signalGPS:'\u4FE1\u53F7\u548CGPS',
+    collisionEvents:'\u907F\u78B0\u4E8B\u4EF6', meshNetwork:'\u7F51\u7EDC\u62D3\u6251',
+    connection:'\u8FDE\u63A5', display:'\u663E\u793A', about:'\u5173\u4E8E', registerDrone:'\u6CE8\u518C\u65E0\u4EBA\u673A',
+  }
+};
+
+let currentLang = localStorage.getItem('enjambre-lang') || 'en';
+
+function applyI18n(lang) {
+  currentLang = lang;
+  localStorage.setItem('enjambre-lang', lang);
+  const t = i18n[lang] || i18n.en;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+  const btn = document.getElementById('langBtn');
+  if (btn) btn.innerHTML = '\ud83c\udf10 ' + lang.toUpperCase();
+  document.querySelectorAll('.lang-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.lang === lang);
+  });
+}
+
+function toggleLangDropdown() { document.getElementById('langDropdown').classList.toggle('show'); }
+function setLang(lang) { applyI18n(lang); document.getElementById('langDropdown').classList.remove('show'); }
+document.addEventListener('click', (e) => { if (!e.target.closest('.lang-selector')) { const dd = document.getElementById('langDropdown'); if (dd) dd.classList.remove('show'); } });
+document.addEventListener('DOMContentLoaded', () => applyI18n(currentLang));
 
 let drones = [];
 let missions = [];
@@ -541,6 +609,8 @@ function updateAll() {
   renderMissions();
   renderTelemetry();
   renderAnalytics();
+  // Re-apply i18n after dynamic rendering
+  if (typeof applyI18n === 'function') applyI18n(currentLang);
 }
 
 function updateTopbar() {
@@ -798,10 +868,10 @@ function renderFleet() {
   const counts = fs.status_counts || {};
   summary.innerHTML = `
     <div class="stat"><div class="num">${fs.total_drones || 0}</div><div class="lbl">Total Drones</div></div>
-    <div class="stat"><div class="num" style="color:var(--blue)">${counts.flying || 0}</div><div class="lbl">Flying / Volando</div></div>
-    <div class="stat"><div class="num" style="color:var(--green)">${counts.idle || 0}</div><div class="lbl">Idle / Inactivo</div></div>
-    <div class="stat"><div class="num" style="color:${avgBat > 30 ? 'var(--green)' : avgBat > 15 ? 'var(--orange)' : 'var(--red)'}">${avgBat.toFixed(0)}%</div><div class="lbl">Avg Battery / Prom Bater&iacute;a</div></div>
-    <div class="stat"><div class="num" style="color:var(--cyan)">${((fs.mesh_connectivity || 0) * 100).toFixed(0)}%</div><div class="lbl">Mesh / Conectividad</div></div>
+    <div class="stat"><div class="num" style="color:var(--blue)">${counts.flying || 0}</div><div class="lbl" data-i18n="statusFlying">Flying</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">${counts.idle || 0}</div><div class="lbl" data-i18n="statusIdle">Idle</div></div>
+    <div class="stat"><div class="num" style="color:${avgBat > 30 ? 'var(--green)' : avgBat > 15 ? 'var(--orange)' : 'var(--red)'}">${avgBat.toFixed(0)}%</div><div class="lbl">Avg Battery</div></div>
+    <div class="stat"><div class="num" style="color:var(--cyan)">${((fs.mesh_connectivity || 0) * 100).toFixed(0)}%</div><div class="lbl">Mesh</div></div>
   `;
 
   const grid = document.getElementById('droneGrid');
