@@ -55,9 +55,14 @@ _ENV_API_KEY = os.environ.get("ENJAMBRE_API_KEY")
 API_KEY: str = _ENV_API_KEY or secrets.token_urlsafe(32)
 
 
-async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
-    """Dependency that rejects requests without a valid API key."""
-    if not secrets.compare_digest(x_api_key, API_KEY):
+DEMO_MODE = os.environ.get("ENJAMBRE_DEMO", "1") == "1"
+
+
+async def verify_api_key(x_api_key: str = Header(default="", alias="X-API-Key")):
+    """Dependency that rejects requests without a valid API key (bypassed in demo mode)."""
+    if DEMO_MODE:
+        return "demo"
+    if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
     return x_api_key
 
@@ -126,6 +131,59 @@ def _build_telemetry_snapshot(tick_result: dict) -> dict:
 # Lifespan
 # ---------------------------------------------------------------------------
 
+def _seed_demo_data() -> None:
+    """Pre-register 5 drones and 1 sample area so the demo works out of the box."""
+    # Base position: agricultural zone near Bogota, Colombia
+    base_lat, base_lon = 4.711, -74.072
+
+    drone_defs = [
+        ("Halcon-1",  base_lat + 0.0010, base_lon + 0.0005,  14.0, ["rgb", "ndvi"]),
+        ("Halcon-2",  base_lat - 0.0008, base_lon + 0.0012,  15.0, ["rgb", "ndvi", "thermal"]),
+        ("Aguila-3",  base_lat + 0.0005, base_lon - 0.0010,  12.0, ["rgb", "multispectral"]),
+        ("Condor-4",  base_lat - 0.0003, base_lon - 0.0006,  16.0, ["rgb", "ndvi", "lidar"]),
+        ("Colibri-5", base_lat + 0.0015, base_lon + 0.0003,  13.0, ["rgb", "ndvi"]),
+    ]
+
+    for name, lat, lon, speed, sensors in drone_defs:
+        d = coordinator.register_drone(
+            name=name,
+            position=GeoPoint(lat, lon, 0.0),
+            max_speed=speed,
+            comm_range=2000.0,
+            sensor_types=sensors,
+        )
+        d.battery_pct = random.uniform(72, 100)
+        logger.info("Seeded drone %s (%s)", d.drone_id, name)
+
+    # Sample mission area — roughly 20 hectares rectangular field
+    boundary = [
+        GeoPoint(base_lat - 0.002, base_lon - 0.003),
+        GeoPoint(base_lat - 0.002, base_lon + 0.003),
+        GeoPoint(base_lat + 0.002, base_lon + 0.003),
+        GeoPoint(base_lat + 0.002, base_lon - 0.003),
+    ]
+    area = coordinator.create_area("Finca El Dorado — Lote Norte", boundary)
+    logger.info("Seeded area %s", area.area_id)
+
+    # Create a planned mission so the demo can start it immediately
+    drone_ids = list(coordinator.drones.keys())
+    try:
+        mission = coordinator.create_mission(
+            name="Escaneo NDVI — Lote Norte",
+            area_id=area.area_id,
+            formation=FormationType.GRID,
+            altitude_m=30.0,
+            overlap_pct=0.3,
+            speed_ms=8.0,
+            drone_ids=drone_ids,
+        )
+        # Auto-start the mission so drones are moving for the demo
+        coordinator.start_mission(mission.mission_id)
+        logger.info("Seeded and auto-started mission %s", mission.mission_id)
+    except Exception as e:
+        logger.warning("Could not auto-start seed mission: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global simulation_task
@@ -133,6 +191,10 @@ async def lifespan(app: FastAPI):
         logger.warning("ENJAMBRE_API_KEY not set — using auto-generated key: %s", API_KEY)
     else:
         logger.info("Using API key from ENJAMBRE_API_KEY environment variable")
+
+    _seed_demo_data()
+    logger.info("Demo seed data loaded")
+
     simulation_task = asyncio.create_task(_simulation_loop())
     logger.info("Simulation loop started")
     yield
@@ -155,14 +217,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_ALLOWED_ORIGINS = os.environ.get("ENJAMBRE_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080").split(",")
+_ALLOWED_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

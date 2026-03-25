@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enjambre — Drone Swarm Command Center</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;--bg4:#21283b;
+  --green:#00d26a;--green2:#00ff80;--earth:#c8a96e;--earth2:#a68a4e;
+  --red:#ff4757;--orange:#ffa502;--blue:#1e90ff;--cyan:#00d4ff;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --border:#30363d;--border2:#484f58;
+  --radius:8px;--radius2:12px;
+}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+a{color:var(--green);text-decoration:none}
+
+/* Layout */
+.app{display:flex;height:100vh;width:100vw}
+.sidebar{width:64px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;z-index:100;flex-shrink:0}
+.sidebar .logo{font-size:22px;margin-bottom:20px;cursor:default;user-select:none}
+.sidebar .nav-btn{width:44px;height:44px;border:none;background:transparent;color:var(--text2);font-size:20px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:6px;transition:.15s;position:relative}
+.sidebar .nav-btn:hover{background:var(--bg3);color:var(--text)}
+.sidebar .nav-btn.active{background:var(--green);color:var(--bg);box-shadow:0 0 16px rgba(0,210,106,.3)}
+.sidebar .nav-btn .tooltip{position:absolute;left:60px;background:var(--bg4);color:var(--text);padding:4px 10px;border-radius:6px;font-size:12px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s;z-index:200}
+.sidebar .nav-btn:hover .tooltip{opacity:1}
+.sidebar .spacer{flex:1}
+.sidebar .status-dot{width:10px;height:10px;border-radius:50%;background:var(--green);margin-bottom:8px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.topbar .title{font-size:14px;font-weight:600;color:var(--text)}
+.topbar .badge{background:var(--bg4);color:var(--green);padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.topbar .badge.warn{color:var(--orange);border:1px solid var(--orange)}
+.topbar .badge.danger{color:var(--red);border:1px solid var(--red)}
+.topbar .spacer{flex:1}
+.topbar .clock{color:var(--text2);font-size:12px;font-family:monospace}
+.topbar .conn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.topbar .conn .dot{width:8px;height:8px;border-radius:50%}
+.topbar .conn .dot.ok{background:var(--green)}
+.topbar .conn .dot.err{background:var(--red)}
+
+.content{flex:1;overflow:auto;position:relative}
+.tab-panel{display:none;height:100%;width:100%}
+.tab-panel.active{display:flex;flex-direction:column}
+
+/* Map Tab */
+#mapCanvas{flex:1;cursor:crosshair}
+.map-overlay{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:8px;z-index:10}
+.map-controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
+.map-legend{position:absolute;top:12px;right:12px;background:rgba(13,17,23,.9);border:1px solid var(--border);border-radius:var(--radius);padding:12px;z-index:10;min-width:180px}
+.map-legend h4{font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.map-legend .item{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:4px}
+.map-legend .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+.btn{padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn:hover{background:var(--bg4);border-color:var(--border2)}
+.btn.primary{background:var(--green);color:var(--bg);border-color:var(--green);font-weight:600}
+.btn.primary:hover{background:var(--green2)}
+.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.btn.warn{color:var(--orange);border-color:var(--orange)}
+.btn.warn:hover{background:var(--orange);color:var(--bg)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:11px}
+
+/* Info cards */
+.info-card{background:rgba(13,17,23,.92);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;backdrop-filter:blur(8px);font-size:12px}
+.info-card .label{color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+.info-card .value{font-size:18px;font-weight:700;color:var(--green)}
+.info-card .value.earth{color:var(--earth)}
+
+/* Drone popup */
+.drone-popup{position:absolute;background:var(--bg2);border:1px solid var(--green);border-radius:var(--radius2);padding:16px;min-width:260px;z-index:50;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
+.drone-popup .close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px}
+.drone-popup h3{font-size:14px;margin-bottom:10px;color:var(--green)}
+.drone-popup .row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}
+.drone-popup .row .lbl{color:var(--text2)}
+.drone-popup .row .val{color:var(--text);font-weight:500;font-family:monospace}
+
+/* Fleet Tab */
+.fleet-container{padding:20px;overflow:auto;height:100%}
+.fleet-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.fleet-summary .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.fleet-summary .stat .num{font-size:28px;font-weight:700;color:var(--green)}
+.fleet-summary .stat .lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
+.drone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.drone-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;transition:.2s}
+.drone-card:hover{border-color:var(--green);box-shadow:0 0 12px rgba(0,210,106,.1)}
+.drone-card .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.drone-card .name{font-size:14px;font-weight:600}
+.drone-card .status{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase}
+.drone-card .status.idle{background:rgba(0,210,106,.15);color:var(--green)}
+.drone-card .status.armed{background:rgba(0,212,255,.15);color:var(--cyan)}
+.drone-card .status.flying{background:rgba(30,144,255,.15);color:var(--blue)}
+.drone-card .status.returning{background:rgba(255,165,2,.15);color:var(--orange)}
+.drone-card .status.fault{background:rgba(255,71,87,.15);color:var(--red)}
+.drone-card .status.offline{background:rgba(110,118,129,.15);color:var(--text3)}
+.drone-card .status.charging{background:rgba(200,169,110,.15);color:var(--earth)}
+.drone-card .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.drone-card .metric{font-size:11px;color:var(--text2)}
+.drone-card .metric span{display:block;font-size:14px;color:var(--text);font-weight:500;font-family:monospace}
+.battery-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:4px}
+.battery-bar .fill{height:100%;border-radius:3px;transition:width .5s}
+.drone-card .actions{display:flex;gap:6px;margin-top:8px}
+
+/* Missions Tab */
+.missions-container{padding:20px;overflow:auto;height:100%;display:flex;flex-direction:column;gap:16px}
+.mission-create{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px}
+.mission-create h3{margin-bottom:12px;font-size:14px;color:var(--green)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.form-group label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--green)}
+.mission-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px}
+.mission-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mission-card .mname{font-weight:600;font-size:14px}
+.progress-bar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin:8px 0}
+.progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:4px;transition:width .5s}
+.mission-card .details{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;font-size:12px;color:var(--text2)}
+.mission-card .details span{color:var(--text);font-family:monospace}
+
+/* Telemetry Tab */
+.telemetry-container{padding:20px;overflow:auto;height:100%}
+.telemetry-header{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px}
+.chart-card h4{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.chart-card canvas{width:100%;height:160px}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gauge-ring{width:100px;height:100px;border-radius:50%;border:6px solid var(--bg4);position:relative;display:flex;align-items:center;justify-content:center}
+.gauge-ring .val{font-size:20px;font-weight:700}
+.coord-display{font-family:monospace;font-size:13px;color:var(--cyan);background:var(--bg3);padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border)}
+
+/* Analytics Tab */
+.analytics-container{padding:20px;overflow:auto;height:100%}
+.analytics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:20px}
+.analytics-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;text-align:center}
+.analytics-card .num{font-size:32px;font-weight:700;color:var(--green)}
+.analytics-card .num.earth{color:var(--earth)}
+.analytics-card .lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.analytics-card .sub{font-size:11px;color:var(--text3);margin-top:2px}
+.conflict-log{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;max-height:300px;overflow:auto}
+.conflict-log h4{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.conflict-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.conflict-row .warn{color:var(--orange)}
+.mesh-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-top:16px}
+.mesh-card h4{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+
+/* Settings Tab */
+.settings-container{padding:20px;overflow:auto;height:100%;max-width:600px}
+.settings-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.settings-group h3{font-size:14px;margin-bottom:12px;color:var(--green)}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-row .slabel{font-size:13px}
+.setting-row .sdesc{font-size:11px;color:var(--text2)}
+.toggle{width:40px;height:22px;background:var(--bg4);border-radius:11px;cursor:pointer;position:relative;border:none;transition:.2s}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}
+.toggle.on::after{left:20px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px;width:400px;max-width:90vw}
+.modal h3{margin-bottom:16px;color:var(--green)}
+.modal .form-group{margin-bottom:12px}
+.modal .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* Formation selector */
+.formation-selector{display:flex;gap:6px}
+.formation-btn{padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;transition:.15s}
+.formation-btn.active,.formation-btn:hover{border-color:var(--green);color:var(--green);background:rgba(0,210,106,.1)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo" title="Enjambre">&#x1F41D;</div>
+    <button class="nav-btn active" data-tab="map" title="Map"><span>&#x1F5FA;</span><span class="tooltip">Map / Mapa</span></button>
+    <button class="nav-btn" data-tab="fleet" title="Fleet"><span>&#x1F681;</span><span class="tooltip">Fleet / Flota</span></button>
+    <button class="nav-btn" data-tab="missions" title="Missions"><span>&#x1F4CB;</span><span class="tooltip">Missions / Misiones</span></button>
+    <button class="nav-btn" data-tab="telemetry" title="Telemetry"><span>&#x1F4E1;</span><span class="tooltip">Telemetry / Telemetr&iacute;a</span></button>
+    <button class="nav-btn" data-tab="analytics" title="Analytics"><span>&#x1F4CA;</span><span class="tooltip">Analytics / An&aacute;lisis</span></button>
+    <button class="nav-btn" data-tab="settings" title="Settings"><span>&#x2699;</span><span class="tooltip">Settings / Ajustes</span></button>
+    <div class="spacer"></div>
+    <div class="status-dot" id="statusDot" title="API Connected"></div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="title">ENJAMBRE <span style="color:var(--text2);font-weight:400">Swarm Command Center</span></div>
+      <div class="badge" id="fleetBadge">0 Drones</div>
+      <div class="badge" id="missionBadge">0 Active</div>
+      <div class="spacer"></div>
+      <div class="conn"><div class="dot ok" id="connDot"></div><span id="connLabel">Connected</span></div>
+      <div class="clock" id="clock"></div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- MAP TAB -->
+      <div class="tab-panel active" id="tab-map">
+        <div class="map-overlay">
+          <div class="info-card">
+            <div class="label">Formation / Formaci&oacute;n</div>
+            <div class="value" id="mapFormation" style="font-size:14px">GRID</div>
+          </div>
+          <div class="info-card">
+            <div class="label">Active Drones / Drones Activos</div>
+            <div class="value" id="mapActiveDrones">0</div>
+          </div>
+          <div class="info-card">
+            <div class="label">Mesh Connectivity / Conectividad</div>
+            <div class="value earth" id="mapMesh">--</div>
+          </div>
+        </div>
+
+        <div class="map-legend">
+          <h4>Legend / Leyenda</h4>
+          <div class="item"><div class="dot" style="background:var(--green)"></div> Idle / Inactivo</div>
+          <div class="item"><div class="dot" style="background:var(--cyan)"></div> Armed / Armado</div>
+          <div class="item"><div class="dot" style="background:var(--blue)"></div> Flying / Volando</div>
+          <div class="item"><div class="dot" style="background:var(--orange)"></div> Returning / Regresando</div>
+          <div class="item"><div class="dot" style="background:var(--red)"></div> Fault / Falla</div>
+          <div class="item"><div class="dot" style="background:var(--earth)"></div> Mission Area / Zona</div>
+        </div>
+
+        <canvas id="mapCanvas"></canvas>
+
+        <div class="map-controls">
+          <button class="btn primary" id="btnLaunch">Launch Mission</button>
+          <button class="btn warn" id="btnPause">Pause</button>
+          <button class="btn danger" id="btnReturn">Return All</button>
+          <div class="formation-selector" id="formationSelector">
+            <button class="formation-btn active" data-f="grid">Grid</button>
+            <button class="formation-btn" data-f="spiral">Spiral</button>
+            <button class="formation-btn" data-f="converge">Converge</button>
+            <button class="formation-btn" data-f="line">Line</button>
+            <button class="formation-btn" data-f="v_shape">V-Shape</button>
+          </div>
+        </div>
+
+        <!-- Drone popup -->
+        <div class="drone-popup" id="dronePopup">
+          <button class="close" id="popupClose">&times;</button>
+          <h3 id="popupName">--</h3>
+          <div class="row"><span class="lbl">Status</span><span class="val" id="popupStatus">--</span></div>
+          <div class="row"><span class="lbl">Battery</span><span class="val" id="popupBattery">--</span></div>
+          <div class="row"><span class="lbl">Altitude</span><span class="val" id="popupAlt">--</span></div>
+          <div class="row"><span class="lbl">Speed</span><span class="val" id="popupSpeed">--</span></div>
+          <div class="row"><span class="lbl">Heading</span><span class="val" id="popupHeading">--</span></div>
+          <div class="row"><span class="lbl">Mission</span><span class="val" id="popupMission">--</span></div>
+          <div class="row"><span class="lbl">Waypoints</span><span class="val" id="popupWP">--</span></div>
+        </div>
+      </div>
+
+      <!-- FLEET TAB -->
+      <div class="tab-panel" id="tab-fleet">
+        <div class="fleet-container">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="font-size:18px">Fleet Management <span style="color:var(--text2);font-weight:400">/ Gesti&oacute;n de Flota</span></h2>
+            <button class="btn primary" id="btnRegisterDrone">+ Register Drone</button>
+          </div>
+          <div class="fleet-summary" id="fleetSummary"></div>
+          <div class="drone-grid" id="droneGrid"></div>
+        </div>
+      </div>
+
+      <!-- MISSIONS TAB -->
+      <div class="tab-panel" id="tab-missions">
+        <div class="missions-container">
+          <div class="mission-create">
+            <h3>Create Mission / Crear Misi&oacute;n</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Mission Name</label><input id="missionName" value="Escaneo NDVI"></div>
+              <div class="form-group"><label>Area</label><select id="missionArea"></select></div>
+              <div class="form-group"><label>Formation</label>
+                <select id="missionFormation">
+                  <option value="grid">Grid</option><option value="spiral">Spiral</option>
+                  <option value="converge">Converge</option><option value="line">Line</option>
+                  <option value="v_shape">V-Shape</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Altitude (m)</label><input id="missionAlt" type="number" value="30" min="5" max="500"></div>
+              <div class="form-group"><label>Overlap (%)</label><input id="missionOverlap" type="number" value="30" min="0" max="95"></div>
+              <div class="form-group"><label>Speed (m/s)</label><input id="missionSpeed" type="number" value="8" min="1" max="50"></div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button class="btn primary" id="btnCreateMission">Create & Plan</button>
+            </div>
+          </div>
+          <div id="missionsList"></div>
+        </div>
+      </div>
+
+      <!-- TELEMETRY TAB -->
+      <div class="tab-panel" id="tab-telemetry">
+        <div class="telemetry-container">
+          <div class="telemetry-header">
+            <h2 style="font-size:18px">Telemetry <span style="color:var(--text2);font-weight:400">/ Telemetr&iacute;a</span></h2>
+            <select id="telemetryDrone" class="btn" style="min-width:160px"></select>
+            <div class="conn" id="wsStatus"><div class="dot ok" id="wsDot"></div><span id="wsLabel">WS Connected</span></div>
+          </div>
+          <div class="chart-grid">
+            <div class="chart-card"><h4>Battery / Bater&iacute;a</h4><canvas id="chartBattery"></canvas></div>
+            <div class="chart-card"><h4>Altitude / Altitud</h4><canvas id="chartAltitude"></canvas></div>
+            <div class="chart-card"><h4>Speed / Velocidad</h4><canvas id="chartSpeed"></canvas></div>
+            <div class="chart-card">
+              <h4>Signal & GPS / Se&ntilde;al y GPS</h4>
+              <div class="gauge">
+                <div class="gauge-ring" id="signalGauge"><div class="val" id="signalVal">--</div></div>
+                <div style="font-size:11px;color:var(--text2)">Signal Strength</div>
+              </div>
+              <div class="coord-display" id="gpsCoords" style="margin-top:12px">LAT: -- LON: -- ALT: --</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS TAB -->
+      <div class="tab-panel" id="tab-analytics">
+        <div class="analytics-container">
+          <h2 style="font-size:18px;margin-bottom:16px">Analytics <span style="color:var(--text2);font-weight:400">/ An&aacute;lisis</span></h2>
+          <div class="analytics-grid" id="analyticsGrid"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="conflict-log" id="conflictLog">
+              <h4>Collision Avoidance Events / Eventos de Evasi&oacute;n</h4>
+              <div id="conflictList"><p style="color:var(--text3);font-size:12px">No conflicts detected</p></div>
+            </div>
+            <div class="mesh-card" id="meshCard">
+              <h4>Mesh Network / Red Mesh</h4>
+              <canvas id="meshCanvas" style="width:100%;height:200px"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div class="tab-panel" id="tab-settings">
+        <div class="settings-container">
+          <h2 style="font-size:18px;margin-bottom:16px">Settings <span style="color:var(--text2);font-weight:400">/ Ajustes</span></h2>
+          <div class="settings-group">
+            <h3>Connection / Conexi&oacute;n</h3>
+            <div class="setting-row">
+              <div><div class="slabel">API Endpoint</div><div class="sdesc">Backend URL</div></div>
+              <input id="settingApi" value="http://localhost:8000" style="width:220px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px">
+            </div>
+            <div class="setting-row">
+              <div><div class="slabel">Poll Interval (ms)</div><div class="sdesc">Data refresh rate</div></div>
+              <input id="settingPoll" type="number" value="2000" min="500" max="10000" style="width:100px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px">
+            </div>
+          </div>
+          <div class="settings-group">
+            <h3>Display / Visualizaci&oacute;n</h3>
+            <div class="setting-row">
+              <div><div class="slabel">Show Mesh Lines</div><div class="sdesc">Draw P2P connections</div></div>
+              <button class="toggle on" id="toggleMesh" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="setting-row">
+              <div><div class="slabel">Show Waypoints</div><div class="sdesc">Draw planned paths</div></div>
+              <button class="toggle on" id="toggleWaypoints" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="setting-row">
+              <div><div class="slabel">Show Field Grid</div><div class="sdesc">Agricultural grid overlay</div></div>
+              <button class="toggle on" id="toggleGrid" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+          <div class="settings-group">
+            <h3>About / Acerca de</h3>
+            <p style="font-size:13px;color:var(--text2);line-height:1.6">
+              <strong style="color:var(--green)">Enjambre v1.0</strong><br>
+              Decentralized Drone Swarm Coordination for Agriculture.<br>
+              Vertex Swarm Challenge 2026.<br>
+              Built with FastAPI, Canvas, and WebSocket real-time telemetry.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Register Drone Modal -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <h3>Register Drone / Registrar Dron</h3>
+    <div class="form-group"><label>Name / Nombre</label><input id="regName" placeholder="e.g. Halcon-6"></div>
+    <div class="form-group"><label>Latitude</label><input id="regLat" type="number" step="0.0001" value="4.711"></div>
+    <div class="form-group"><label>Longitude</label><input id="regLon" type="number" step="0.0001" value="-74.072"></div>
+    <div class="form-group"><label>Max Speed (m/s)</label><input id="regSpeed" type="number" value="15" min="1" max="50"></div>
+    <div class="form-group"><label>Sensors</label><input id="regSensors" value="rgb,ndvi"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="document.getElementById('registerModal').classList.remove('show')">Cancel</button>
+      <button class="btn primary" id="btnDoRegister">Register</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===========================================================================
+// Enjambre Frontend — Single-file dashboard
+// ===========================================================================
+
+const API = () => document.getElementById('settingApi').value || 'http://localhost:8000';
+const POLL = () => parseInt(document.getElementById('settingPoll').value) || 2000;
+
+let drones = [];
+let missions = [];
+let areas = [];
+let fleetStatus = {};
+let analytics = {};
+let conflicts = [];
+let meshData = {};
+let selectedDrone = null;
+let ws = null;
+let wsConnected = false;
+let telemetryHistory = {}; // droneId -> {battery:[], alt:[], speed:[], signal:[]}
+let conflictLog = [];
+
+// ---------------------------------------------------------------------------
+// Tab switching
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'map') requestAnimationFrame(renderMap);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Clock
+// ---------------------------------------------------------------------------
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour12:false}) + ' UTC' + (now.getTimezoneOffset() > 0 ? '-' : '+') + Math.abs(now.getTimezoneOffset()/60);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
+async function api(path, opts = {}) {
+  try {
+    const r = await fetch(API() + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...opts.headers }
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    setConnected(true);
+    return await r.json();
+  } catch (e) {
+    setConnected(false);
+    console.error('API error:', path, e);
+    return null;
+  }
+}
+
+function setConnected(ok) {
+  const dot = document.getElementById('connDot');
+  const label = document.getElementById('connLabel');
+  const sdot = document.getElementById('statusDot');
+  if (ok) {
+    dot.className = 'dot ok'; label.textContent = 'Connected'; sdot.style.background = 'var(--green)';
+  } else {
+    dot.className = 'dot err'; label.textContent = 'Disconnected'; sdot.style.background = 'var(--red)';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Data fetching
+// ---------------------------------------------------------------------------
+async function fetchAll() {
+  const [d, m, a, f, an, c, me] = await Promise.all([
+    api('/api/v1/drones'),
+    api('/api/v1/missions'),
+    api('/api/v1/areas'),
+    api('/api/v1/fleet/status'),
+    api('/api/v1/analytics'),
+    api('/api/v1/analytics/conflicts'),
+    api('/api/v1/analytics/mesh'),
+  ]);
+  if (d) drones = d;
+  if (m) missions = m;
+  if (a) areas = a;
+  if (f) fleetStatus = f;
+  if (an) analytics = an;
+  if (c) {
+    conflicts = c.conflicts || [];
+    if (conflicts.length > 0) {
+      conflicts.forEach(cf => {
+        conflictLog.unshift({ ...cf, time: new Date().toLocaleTimeString() });
+      });
+      if (conflictLog.length > 50) conflictLog = conflictLog.slice(0, 50);
+    }
+  }
+  if (me) meshData = me;
+
+  // Telemetry history tracking
+  drones.forEach(dr => {
+    if (!telemetryHistory[dr.drone_id]) {
+      telemetryHistory[dr.drone_id] = { battery: [], alt: [], speed: [], signal: [] };
+    }
+    const h = telemetryHistory[dr.drone_id];
+    const spd = Math.sqrt(
+      (dr.position ? 0 : 0) // speed from status
+    );
+    h.battery.push(dr.battery_pct);
+    h.alt.push(dr.position?.alt || 0);
+    h.speed.push(0); // will be updated via ws
+    h.signal.push(1);
+    if (h.battery.length > 60) { h.battery.shift(); h.alt.shift(); h.speed.shift(); h.signal.shift(); }
+  });
+
+  updateAll();
+}
+
+function updateAll() {
+  updateTopbar();
+  renderMap();
+  renderFleet();
+  renderMissions();
+  renderTelemetry();
+  renderAnalytics();
+}
+
+function updateTopbar() {
+  document.getElementById('fleetBadge').textContent = `${drones.length} Drones`;
+  const active = missions.filter(m => m.status === 'active').length;
+  const mb = document.getElementById('missionBadge');
+  mb.textContent = `${active} Active`;
+  mb.className = active > 0 ? 'badge' : 'badge';
+}
+
+// ---------------------------------------------------------------------------
+// MAP rendering
+// ---------------------------------------------------------------------------
+function renderMap() {
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  // Background
+  ctx.fillStyle = '#0a0f14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Compute bounds from all drone positions + areas
+  let allLats = [], allLons = [];
+  drones.forEach(d => { allLats.push(d.position.lat); allLons.push(d.position.lon); });
+  areas.forEach(a => a.boundary.forEach(p => { allLats.push(p.lat); allLons.push(p.lon); }));
+
+  if (allLats.length === 0) { allLats = [4.709, 4.713]; allLons = [-74.075, -74.069]; }
+
+  const minLat = Math.min(...allLats) - 0.001;
+  const maxLat = Math.max(...allLats) + 0.001;
+  const minLon = Math.min(...allLons) - 0.001;
+  const maxLon = Math.max(...allLons) + 0.001;
+  const pad = 60;
+
+  function toXY(lat, lon) {
+    const x = pad + ((lon - minLon) / (maxLon - minLon)) * (W - 2*pad);
+    const y = pad + ((maxLat - lat) / (maxLat - minLat)) * (H - 2*pad);
+    return [x, y];
+  }
+
+  // Draw grid
+  if (document.getElementById('toggleGrid').classList.contains('on')) {
+    ctx.strokeStyle = 'rgba(0,210,106,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 20; i++) {
+      const lat = minLat + (maxLat - minLat) * i / 20;
+      const lon = minLon + (maxLon - minLon) * i / 20;
+      const [x1, y1] = toXY(lat, minLon);
+      const [x2, y2] = toXY(lat, maxLon);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      const [x3, y3] = toXY(minLat, lon);
+      const [x4, y4] = toXY(maxLat, lon);
+      ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
+    }
+  }
+
+  // Draw mission areas
+  areas.forEach(area => {
+    if (area.boundary.length < 3) return;
+    ctx.beginPath();
+    const [fx, fy] = toXY(area.boundary[0].lat, area.boundary[0].lon);
+    ctx.moveTo(fx, fy);
+    area.boundary.forEach((p, i) => {
+      if (i === 0) return;
+      const [px, py] = toXY(p.lat, p.lon);
+      ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(200,169,110,0.08)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,169,110,0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Area label
+    const cx = area.boundary.reduce((s, p) => s + p.lat, 0) / area.boundary.length;
+    const cy = area.boundary.reduce((s, p) => s + p.lon, 0) / area.boundary.length;
+    const [lx, ly] = toXY(cx, cy);
+    ctx.fillStyle = 'rgba(200,169,110,0.6)';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(area.name, lx, ly);
+    ctx.fillText(`${(area.area_m2 / 10000).toFixed(1)} ha`, lx, ly + 14);
+  });
+
+  // Mesh connections
+  if (document.getElementById('toggleMesh').classList.contains('on') && meshData.nodes) {
+    ctx.strokeStyle = 'rgba(0,210,106,0.15)';
+    ctx.lineWidth = 1;
+    const droneMap = {};
+    drones.forEach(d => droneMap[d.drone_id] = d);
+    Object.entries(meshData.nodes).forEach(([did, node]) => {
+      const dr = droneMap[did];
+      if (!dr) return;
+      const [x1, y1] = toXY(dr.position.lat, dr.position.lon);
+      (node.neighbours || []).forEach(nid => {
+        const nb = droneMap[nid];
+        if (!nb) return;
+        const [x2, y2] = toXY(nb.position.lat, nb.position.lon);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        // Midpoint pulse
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        ctx.fillStyle = 'rgba(0,210,106,0.3)';
+        ctx.beginPath(); ctx.arc(mx, my, 2, 0, Math.PI*2); ctx.fill();
+      });
+    });
+  }
+
+  // Waypoints
+  if (document.getElementById('toggleWaypoints').classList.contains('on')) {
+    drones.forEach(d => {
+      if (d.status !== 'flying') return;
+      // We don't have individual waypoints from polling, so draw a trail hint
+      const [dx, dy] = toXY(d.position.lat, d.position.lon);
+      const headRad = (d.heading || 0) * Math.PI / 180;
+      const len = 30;
+      ctx.strokeStyle = 'rgba(30,144,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(dx, dy);
+      // heading: 0=North, clockwise
+      ctx.lineTo(dx + Math.sin(headRad)*len, dy - Math.cos(headRad)*len);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
+  // Draw drones
+  const statusColor = {
+    idle: '#00d26a', armed: '#00d4ff', flying: '#1e90ff',
+    returning: '#ffa502', charging: '#c8a96e', fault: '#ff4757', offline: '#6e7681'
+  };
+  const now = Date.now();
+
+  drones.forEach(d => {
+    const [x, y] = toXY(d.position.lat, d.position.lon);
+    const color = statusColor[d.status] || '#6e7681';
+
+    // Outer glow
+    if (d.status === 'flying' || d.status === 'returning') {
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, 20);
+      grad.addColorStop(0, color + '40');
+      grad.addColorStop(1, color + '00');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Drone body
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
+
+    // Direction indicator
+    if (d.status === 'flying' || d.status === 'returning') {
+      const headRad = ((d.heading || 0)) * Math.PI / 180;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.sin(headRad)*14, y - Math.cos(headRad)*14);
+      ctx.stroke();
+      // Arrow head
+      const ax = x + Math.sin(headRad)*14, ay = y - Math.cos(headRad)*14;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Battery indicator ring
+    const battArc = (d.battery_pct / 100) * Math.PI * 2;
+    ctx.strokeStyle = d.battery_pct > 30 ? '#00d26a' : d.battery_pct > 15 ? '#ffa502' : '#ff4757';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 11, -Math.PI/2, -Math.PI/2 + battArc);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.name, x, y + 22);
+  });
+
+  // Update info overlays
+  const activeDrones = drones.filter(d => d.status === 'flying').length;
+  document.getElementById('mapActiveDrones').textContent = activeDrones;
+  const activeMission = missions.find(m => m.status === 'active');
+  document.getElementById('mapFormation').textContent = activeMission ? activeMission.formation.toUpperCase() : 'NONE';
+  document.getElementById('mapMesh').textContent = meshData.connectivity_ratio !== undefined ? (meshData.connectivity_ratio * 100).toFixed(0) + '%' : '--';
+
+  // Store drone XY for click detection
+  canvas._dronePositions = drones.map(d => {
+    const [x, y] = toXY(d.position.lat, d.position.lon);
+    return { drone: d, x, y };
+  });
+}
+
+// Map click -> drone popup
+document.getElementById('mapCanvas').addEventListener('click', e => {
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const positions = canvas._dronePositions || [];
+  let found = null;
+  for (const p of positions) {
+    const dist = Math.hypot(p.x - mx, p.y - my);
+    if (dist < 16) { found = p; break; }
+  }
+
+  const popup = document.getElementById('dronePopup');
+  if (found) {
+    const d = found.drone;
+    selectedDrone = d.drone_id;
+    popup.style.display = 'block';
+    popup.style.left = Math.min(found.x + 20, window.innerWidth - 300) + 'px';
+    popup.style.top = Math.min(found.y + 60, window.innerHeight - 250) + 'px';
+    document.getElementById('popupName').textContent = `${d.name} (${d.drone_id.slice(-8)})`;
+    document.getElementById('popupStatus').textContent = d.status.toUpperCase();
+    document.getElementById('popupBattery').textContent = d.battery_pct.toFixed(1) + '%';
+    document.getElementById('popupAlt').textContent = (d.position?.alt || 0).toFixed(1) + ' m';
+    document.getElementById('popupSpeed').textContent = (d.remaining_flight_min ? '~' + d.remaining_flight_min.toFixed(0) + ' min' : '--');
+    document.getElementById('popupHeading').textContent = '--';
+    document.getElementById('popupMission').textContent = d.mission_id || 'None';
+    document.getElementById('popupWP').textContent = '--';
+  } else {
+    popup.style.display = 'none';
+    selectedDrone = null;
+  }
+});
+document.getElementById('popupClose').addEventListener('click', () => {
+  document.getElementById('dronePopup').style.display = 'none';
+});
+
+// ---------------------------------------------------------------------------
+// Fleet rendering
+// ---------------------------------------------------------------------------
+function renderFleet() {
+  const summary = document.getElementById('fleetSummary');
+  const fs = fleetStatus;
+  const avgBat = fs.avg_battery_pct || 0;
+  const counts = fs.status_counts || {};
+  summary.innerHTML = `
+    <div class="stat"><div class="num">${fs.total_drones || 0}</div><div class="lbl">Total Drones</div></div>
+    <div class="stat"><div class="num" style="color:var(--blue)">${counts.flying || 0}</div><div class="lbl">Flying / Volando</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">${counts.idle || 0}</div><div class="lbl">Idle / Inactivo</div></div>
+    <div class="stat"><div class="num" style="color:${avgBat > 30 ? 'var(--green)' : avgBat > 15 ? 'var(--orange)' : 'var(--red)'}">${avgBat.toFixed(0)}%</div><div class="lbl">Avg Battery / Prom Bater&iacute;a</div></div>
+    <div class="stat"><div class="num" style="color:var(--cyan)">${((fs.mesh_connectivity || 0) * 100).toFixed(0)}%</div><div class="lbl">Mesh / Conectividad</div></div>
+  `;
+
+  const grid = document.getElementById('droneGrid');
+  grid.innerHTML = drones.map(d => {
+    const batColor = d.battery_pct > 50 ? 'var(--green)' : d.battery_pct > 20 ? 'var(--orange)' : 'var(--red)';
+    return `
+    <div class="drone-card">
+      <div class="header">
+        <div class="name">${d.name}</div>
+        <div class="status ${d.status}">${d.status}</div>
+      </div>
+      <div class="metrics">
+        <div class="metric">Battery<span>${d.battery_pct.toFixed(1)}%</span>
+          <div class="battery-bar"><div class="fill" style="width:${d.battery_pct}%;background:${batColor}"></div></div>
+        </div>
+        <div class="metric">Altitude<span>${(d.position?.alt || 0).toFixed(1)}m</span></div>
+        <div class="metric">Flight Time<span>${d.remaining_flight_min.toFixed(0)} min</span></div>
+        <div class="metric">Sensors<span style="font-size:10px">${d.sensor_types.join(', ')}</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn sm" onclick="armDrone('${d.drone_id}')" ${d.status !== 'idle' ? 'disabled' : ''}>Arm</button>
+        <button class="btn sm" onclick="disarmDrone('${d.drone_id}')" ${!['armed','idle'].includes(d.status) ? 'disabled' : ''}>Disarm</button>
+        <button class="btn sm danger" onclick="returnDrone('${d.drone_id}')" ${!['flying','armed'].includes(d.status) ? 'disabled' : ''}>Return</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function armDrone(id) { await api(`/api/v1/drones/${id}/arm`, { method: 'POST' }); fetchAll(); }
+async function disarmDrone(id) { await api(`/api/v1/drones/${id}/disarm`, { method: 'POST' }); fetchAll(); }
+async function returnDrone(id) { await api(`/api/v1/drones/${id}/return`, { method: 'POST' }); fetchAll(); }
+
+// ---------------------------------------------------------------------------
+// Missions rendering
+// ---------------------------------------------------------------------------
+function renderMissions() {
+  // Populate area selector
+  const areaSelect = document.getElementById('missionArea');
+  if (areaSelect.children.length !== areas.length) {
+    areaSelect.innerHTML = areas.map(a => `<option value="${a.area_id}">${a.name} (${(a.area_m2/10000).toFixed(1)} ha)</option>`).join('');
+  }
+
+  const list = document.getElementById('missionsList');
+  list.innerHTML = missions.map(m => {
+    const statusColors = { planned: 'var(--cyan)', active: 'var(--blue)', paused: 'var(--orange)', completed: 'var(--green)', aborted: 'var(--red)', draft: 'var(--text3)' };
+    const sc = statusColors[m.status] || 'var(--text2)';
+    return `
+    <div class="mission-card">
+      <div class="top">
+        <div class="mname">${m.name}</div>
+        <div class="status ${m.status}" style="color:${sc};border:1px solid ${sc};padding:2px 10px;border-radius:12px;font-size:11px">${m.status.toUpperCase()}</div>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width:${m.progress_pct}%"></div></div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Progress: ${m.progress_pct.toFixed(1)}% | ${m.total_waypoints} waypoints | ${m.assigned_drones.length} drones</div>
+      <div class="details">
+        <div>Formation: <span>${m.formation}</span></div>
+        <div>Altitude: <span>${m.altitude_m}m</span></div>
+        <div>Speed: <span>${m.speed_ms} m/s</span></div>
+        <div>Overlap: <span>${(m.overlap_pct*100).toFixed(0)}%</span></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px">
+        ${m.status === 'planned' ? `<button class="btn sm primary" onclick="startMission('${m.mission_id}')">Start</button>` : ''}
+        ${m.status === 'active' ? `<button class="btn sm warn" onclick="pauseMission('${m.mission_id}')">Pause</button>` : ''}
+        ${m.status === 'paused' ? `<button class="btn sm primary" onclick="resumeMission('${m.mission_id}')">Resume</button>` : ''}
+        ${['active','paused'].includes(m.status) ? `<button class="btn sm danger" onclick="abortMission('${m.mission_id}')">Abort</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btnCreateMission').addEventListener('click', async () => {
+  const body = {
+    name: document.getElementById('missionName').value || 'New Mission',
+    area_id: document.getElementById('missionArea').value,
+    formation: document.getElementById('missionFormation').value,
+    altitude_m: parseFloat(document.getElementById('missionAlt').value) || 30,
+    overlap_pct: (parseFloat(document.getElementById('missionOverlap').value) || 30) / 100,
+    speed_ms: parseFloat(document.getElementById('missionSpeed').value) || 8,
+  };
+  await api('/api/v1/missions', { method: 'POST', body: JSON.stringify(body) });
+  fetchAll();
+});
+
+async function startMission(id) { await api(`/api/v1/missions/${id}/start`, { method: 'POST' }); fetchAll(); }
+async function pauseMission(id) { await api(`/api/v1/missions/${id}/pause`, { method: 'POST' }); fetchAll(); }
+async function resumeMission(id) { await api(`/api/v1/missions/${id}/resume`, { method: 'POST' }); fetchAll(); }
+async function abortMission(id) { await api(`/api/v1/missions/${id}/abort`, { method: 'POST' }); fetchAll(); }
+
+// ---------------------------------------------------------------------------
+// Map control buttons
+// ---------------------------------------------------------------------------
+document.getElementById('btnLaunch').addEventListener('click', async () => {
+  const planned = missions.find(m => m.status === 'planned');
+  if (planned) {
+    await startMission(planned.mission_id);
+  } else {
+    // Create a new mission with all idle drones, then start it
+    const area = areas[0];
+    if (!area) { alert('No area defined'); return; }
+    const formation = document.querySelector('.formation-btn.active')?.dataset.f || 'grid';
+    const body = {
+      name: 'Quick Mission ' + new Date().toLocaleTimeString(),
+      area_id: area.area_id,
+      formation: formation,
+      altitude_m: 30, overlap_pct: 0.3, speed_ms: 8,
+    };
+    const m = await api('/api/v1/missions', { method: 'POST', body: JSON.stringify(body) });
+    if (m) await api(`/api/v1/missions/${m.mission_id}/start`, { method: 'POST' });
+    fetchAll();
+  }
+});
+
+document.getElementById('btnPause').addEventListener('click', async () => {
+  const active = missions.find(m => m.status === 'active');
+  if (active) await pauseMission(active.mission_id);
+  else {
+    const paused = missions.find(m => m.status === 'paused');
+    if (paused) await resumeMission(paused.mission_id);
+  }
+});
+
+document.getElementById('btnReturn').addEventListener('click', async () => {
+  for (const d of drones) {
+    if (['flying', 'armed'].includes(d.status)) {
+      await api(`/api/v1/drones/${d.drone_id}/return`, { method: 'POST' });
+    }
+  }
+  fetchAll();
+});
+
+document.querySelectorAll('.formation-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Register drone
+// ---------------------------------------------------------------------------
+document.getElementById('btnRegisterDrone').addEventListener('click', () => {
+  document.getElementById('registerModal').classList.add('show');
+});
+document.getElementById('btnDoRegister').addEventListener('click', async () => {
+  const body = {
+    name: document.getElementById('regName').value || 'Drone-' + Date.now(),
+    position: {
+      lat: parseFloat(document.getElementById('regLat').value) || 4.711,
+      lon: parseFloat(document.getElementById('regLon').value) || -74.072,
+      alt: 0
+    },
+    max_speed: parseFloat(document.getElementById('regSpeed').value) || 15,
+    sensor_types: document.getElementById('regSensors').value.split(',').map(s => s.trim()),
+  };
+  await api('/api/v1/drones', { method: 'POST', body: JSON.stringify(body) });
+  document.getElementById('registerModal').classList.remove('show');
+  fetchAll();
+});
+
+// ---------------------------------------------------------------------------
+// Telemetry rendering
+// ---------------------------------------------------------------------------
+function renderTelemetry() {
+  const sel = document.getElementById('telemetryDrone');
+  const currentVal = sel.value;
+  if (sel.children.length !== drones.length || !currentVal) {
+    sel.innerHTML = drones.map(d => `<option value="${d.drone_id}">${d.name} (${d.drone_id.slice(-8)})</option>`).join('');
+    if (currentVal && drones.find(d => d.drone_id === currentVal)) sel.value = currentVal;
+  }
+
+  const did = sel.value;
+  if (!did) return;
+  const drone = drones.find(d => d.drone_id === did);
+  if (!drone) return;
+  const h = telemetryHistory[did];
+  if (!h) return;
+
+  // Draw mini charts
+  drawLineChart('chartBattery', h.battery, '%', d => d > 30 ? '#00d26a' : d > 15 ? '#ffa502' : '#ff4757');
+  drawLineChart('chartAltitude', h.alt, 'm', () => '#00d4ff');
+  drawLineChart('chartSpeed', h.speed, 'm/s', () => '#1e90ff');
+
+  // Signal gauge
+  const sigPct = 100; // placeholder
+  document.getElementById('signalVal').textContent = sigPct + '%';
+  const gaugeRing = document.getElementById('signalGauge');
+  const color = sigPct > 60 ? '#00d26a' : sigPct > 30 ? '#ffa502' : '#ff4757';
+  gaugeRing.style.borderColor = color;
+  gaugeRing.querySelector('.val').style.color = color;
+
+  // GPS
+  document.getElementById('gpsCoords').textContent =
+    `LAT: ${drone.position.lat.toFixed(6)}  LON: ${drone.position.lon.toFixed(6)}  ALT: ${drone.position.alt.toFixed(1)}m`;
+
+  // WS indicator
+  const wsDot = document.getElementById('wsDot');
+  const wsLabel = document.getElementById('wsLabel');
+  wsDot.className = wsConnected ? 'dot ok' : 'dot err';
+  wsLabel.textContent = wsConnected ? 'WS Connected' : 'WS Disconnected';
+}
+
+function drawLineChart(canvasId, data, unit, colorFn) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 160 * dpr;
+  canvas.style.height = '160px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 160;
+
+  ctx.fillStyle = 'transparent';
+  ctx.clearRect(0, 0, W, H);
+
+  if (data.length < 2) return;
+
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = (max - min) || 1;
+  const pad = 8;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(48,54,61,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (H - 2*pad) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  }
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad + (W - 2*pad) * i / (data.length - 1);
+    const y = pad + (H - 2*pad) * (1 - (v - min) / range);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  const lastVal = data[data.length - 1];
+  ctx.strokeStyle = colorFn(lastVal);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill gradient
+  const lastX = pad + (W - 2*pad);
+  const lastY = pad + (H - 2*pad) * (1 - (lastVal - min) / range);
+  ctx.lineTo(lastX, H - pad);
+  ctx.lineTo(pad, H - pad);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, colorFn(lastVal) + '30');
+  grad.addColorStop(1, colorFn(lastVal) + '05');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Current value label
+  ctx.fillStyle = colorFn(lastVal);
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(lastVal.toFixed(1) + ' ' + unit, W - pad, pad + 14);
+}
+
+// ---------------------------------------------------------------------------
+// Analytics rendering
+// ---------------------------------------------------------------------------
+function renderAnalytics() {
+  const grid = document.getElementById('analyticsGrid');
+  const an = analytics;
+  const fleet = an.fleet || {};
+  const totalArea = (an.missions || []).reduce((s, m) => s + (m.area_m2 || 0), 0);
+  const completedMissions = (an.missions || []).filter(m => m.status === 'completed').length;
+  const totalDuration = (an.missions || []).reduce((s, m) => s + (m.duration_s || 0), 0);
+
+  grid.innerHTML = `
+    <div class="analytics-card"><div class="num">${(totalArea / 10000).toFixed(1)}</div><div class="lbl">Hectares Planned</div><div class="sub">Hect&aacute;reas Planificadas</div></div>
+    <div class="analytics-card"><div class="num">${an.total_missions || 0}</div><div class="lbl">Total Missions</div><div class="sub">Total Misiones</div></div>
+    <div class="analytics-card"><div class="num" style="color:var(--blue)">${an.active_missions || 0}</div><div class="lbl">Active Missions</div><div class="sub">Misiones Activas</div></div>
+    <div class="analytics-card"><div class="num earth">${(totalDuration / 3600).toFixed(1)}</div><div class="lbl">Flight Hours</div><div class="sub">Horas de Vuelo</div></div>
+    <div class="analytics-card"><div class="num">${fleet.total_drones || 0}</div><div class="lbl">Fleet Size</div><div class="sub">Tama&ntilde;o de Flota</div></div>
+    <div class="analytics-card"><div class="num" style="color:var(--cyan)">${((fleet.mesh_connectivity || 0) * 100).toFixed(0)}%</div><div class="lbl">Mesh Connectivity</div><div class="sub">Conectividad Mesh</div></div>
+  `;
+
+  // Conflict log
+  const cl = document.getElementById('conflictList');
+  if (conflictLog.length === 0) {
+    cl.innerHTML = '<p style="color:var(--text3);font-size:12px">No conflicts detected / Sin conflictos</p>';
+  } else {
+    cl.innerHTML = conflictLog.slice(0, 20).map(c => `
+      <div class="conflict-row">
+        <span class="warn">${c.drone_a?.slice(-8) || '?'} <-> ${c.drone_b?.slice(-8) || '?'}</span>
+        <span>T=${c.time_to_conflict_s?.toFixed(1) || c.t_conflict?.toFixed(1) || '?'}s</span>
+        <span style="color:var(--text3)">${c.time}</span>
+      </div>
+    `).join('');
+  }
+
+  // Mesh canvas
+  renderMeshGraph();
+}
+
+function renderMeshGraph() {
+  const canvas = document.getElementById('meshCanvas');
+  if (!canvas || !meshData.nodes) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 200 * dpr;
+  canvas.style.height = '200px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 200;
+
+  ctx.fillStyle = 'transparent';
+  ctx.clearRect(0, 0, W, H);
+
+  const nodes = Object.entries(meshData.nodes);
+  if (nodes.length === 0) return;
+
+  // Circular layout
+  const cx = W/2, cy = H/2, r = Math.min(W, H) * 0.35;
+  const positions = {};
+  nodes.forEach(([did], i) => {
+    const angle = (i / nodes.length) * Math.PI * 2 - Math.PI/2;
+    positions[did] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  // Draw edges
+  ctx.strokeStyle = 'rgba(0,210,106,0.2)';
+  ctx.lineWidth = 1;
+  nodes.forEach(([did, node]) => {
+    const p = positions[did];
+    (node.neighbours || []).forEach(nid => {
+      const np = positions[nid];
+      if (!np) return;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(np.x, np.y); ctx.stroke();
+    });
+  });
+
+  // Draw nodes
+  const statusColor = {
+    idle: '#00d26a', armed: '#00d4ff', flying: '#1e90ff',
+    returning: '#ffa502', fault: '#ff4757', offline: '#6e7681', charging: '#c8a96e'
+  };
+  nodes.forEach(([did, node]) => {
+    const p = positions[did];
+    const color = statusColor[node.status] || '#6e7681';
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(node.name || did.slice(-6), p.x, p.y + 20);
+    ctx.fillText(`${node.neighbour_count} peers`, p.x, p.y + 31);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// WebSocket
+// ---------------------------------------------------------------------------
+function connectWS() {
+  try {
+    const wsUrl = API().replace('http', 'ws') + '/ws/telemetry';
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => { wsConnected = true; };
+    ws.onclose = () => { wsConnected = false; setTimeout(connectWS, 3000); };
+    ws.onerror = () => { wsConnected = false; };
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.drones) {
+          data.drones.forEach(wd => {
+            const h = telemetryHistory[wd.drone_id];
+            if (h) {
+              h.speed[h.speed.length - 1] = wd.speed_ms || 0;
+            }
+          });
+        }
+      } catch {}
+    };
+  } catch {
+    wsConnected = false;
+    setTimeout(connectWS, 3000);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Resize
+// ---------------------------------------------------------------------------
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-map').classList.contains('active')) renderMap();
+});
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+fetchAll();
+connectWS();
+setInterval(fetchAll, 2000);
+
+</script>
+</body>
+</html>
