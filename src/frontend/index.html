@@ -1,1848 +1,1327 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enjambre — Decentralized Swarm Coordination</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg: #0d1117;
-      --bg-elevated: #161b22;
-      --bg-card: #1c2128;
-      --green: #00d26a;
-      --green-dim: #00d26a33;
-      --green-glow: #00d26a66;
-      --earth: #c8a96e;
-      --earth-dim: #c8a96e22;
-      --soil: #8b6f47;
-      --text: #e6edf3;
-      --text-muted: #8b949e;
-      --text-dim: #484f58;
-      --border: #30363d;
-      --radius: 16px;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    /* ── NAV ── */
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      padding: 0 48px;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(13, 17, 23, 0.8);
-      backdrop-filter: blur(20px) saturate(1.5);
-      -webkit-backdrop-filter: blur(20px) saturate(1.5);
-      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
-      transition: background 0.3s;
-    }
-
-    .nav-logo {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: var(--text);
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .nav-logo .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: var(--green);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      color: var(--bg);
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 36px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: color 0.2s;
-      letter-spacing: 0.01em;
-    }
-
-    .nav-links a:hover { color: var(--green); }
-
-    .nav-cta {
-      padding: 10px 24px;
-      background: var(--green);
-      color: var(--bg) !important;
-      border-radius: 8px;
-      font-weight: 600 !important;
-      font-size: 13px !important;
-      transition: transform 0.2s, box-shadow 0.2s !important;
-    }
-
-    .nav-cta:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 24px var(--green-glow);
-      color: var(--bg) !important;
-    }
-
-    /* ── Language Selector ── */
-    .lang-selector { position: relative; display: flex; align-items: center; }
-    .lang-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-muted); transition: all 0.2s; font-family: inherit; }
-    .lang-btn:hover { border-color: var(--green); color: var(--text); }
-    .lang-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 2000; min-width: 160px; display: none; overflow: hidden; }
-    .lang-dropdown.show { display: block; }
-    .lang-option { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-size: 13px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
-    .lang-option:hover { background: rgba(0,210,106,0.06); color: var(--text); }
-    .lang-option.active { color: var(--green); background: rgba(0,210,106,0.08); }
-
-    .nav-hamburger {
-      display: none;
-      flex-direction: column;
-      gap: 5px;
-      cursor: pointer;
-      background: none;
-      border: none;
-      padding: 4px;
-    }
-
-    .nav-hamburger span {
-      width: 24px;
-      height: 2px;
-      background: var(--text);
-      border-radius: 2px;
-      transition: 0.3s;
-    }
-
-    /* ── HERO ── */
-    .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      overflow: hidden;
-    }
-
-    #swarm-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-    }
-
-    .hero-gradient {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 50% 40%, var(--green-dim) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 40% at 30% 70%, var(--earth-dim) 0%, transparent 60%);
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      max-width: 900px;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 20px;
-      background: var(--green-dim);
-      border: 1px solid rgba(0, 210, 106, 0.2);
-      border-radius: 100px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--green);
-      margin-bottom: 32px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .hero-badge .pulse {
-      width: 8px;
-      height: 8px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.5); }
-    }
-
-    .hero h1 {
-      font-size: clamp(48px, 7vw, 88px);
-      font-weight: 900;
-      line-height: 0.95;
-      letter-spacing: -3px;
-      margin-bottom: 28px;
-    }
-
-    .hero h1 .line { display: block; }
-    .hero h1 .green { color: var(--green); }
-    .hero h1 .earth { color: var(--earth); }
-
-    .hero-sub {
-      font-size: clamp(16px, 2vw, 20px);
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 600px;
-      margin: 0 auto 48px;
-      font-weight: 400;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .btn-primary {
-      padding: 16px 40px;
-      background: var(--green);
-      color: var(--bg);
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.3s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: inherit;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 40px var(--green-glow);
-    }
-
-    .btn-secondary {
-      padding: 16px 40px;
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: inherit;
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--text-muted);
-      background: var(--bg-elevated);
-    }
-
-    .hero-metrics {
-      display: flex;
-      gap: 48px;
-      justify-content: center;
-      margin-top: 80px;
-      padding-top: 40px;
-      border-top: 1px solid var(--border);
-    }
-
-    .metric {
-      text-align: center;
-    }
-
-    .metric-value {
-      font-size: 36px;
-      font-weight: 800;
-      color: var(--green);
-      letter-spacing: -1px;
-    }
-
-    .metric-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 4px;
-      font-weight: 500;
-    }
-
-    /* ── SECTIONS ── */
-    section {
-      padding: 140px 24px;
-      position: relative;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .section-label {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--green);
-      margin-bottom: 16px;
-    }
-
-    .section-title {
-      font-size: clamp(32px, 4.5vw, 56px);
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1.05;
-      margin-bottom: 20px;
-    }
-
-    .section-subtitle {
-      font-size: 18px;
-      color: var(--text-muted);
-      line-height: 1.7;
-      max-width: 560px;
-    }
-
-    /* ── PROBLEM ── */
-    .problem { background: var(--bg); }
-
-    .problem-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: center;
-      margin-top: 64px;
-    }
-
-    .problem-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    .stat-card {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-      transition: border-color 0.3s, transform 0.3s;
-    }
-
-    .stat-card:hover {
-      border-color: var(--green);
-      transform: translateY(-4px);
-    }
-
-    .stat-card .stat-number {
-      font-size: 40px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--green), var(--earth));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-card .stat-desc {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
-    .problem-visual {
-      position: relative;
-      height: 400px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .field-grid {
-      width: 320px;
-      height: 320px;
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      grid-template-rows: repeat(8, 1fr);
-      gap: 4px;
-      transform: perspective(800px) rotateX(35deg) rotateZ(-10deg);
-    }
-
-    .field-cell {
-      border-radius: 3px;
-      animation: fieldPulse 4s ease-in-out infinite;
-    }
-
-    @keyframes fieldPulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.9; }
-    }
-
-    /* ── SOLUTION ── */
-    .solution {
-      background: var(--bg-elevated);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .solution-features {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-      margin-top: 64px;
-    }
-
-    .feature-card {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 40px 32px;
-      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--green), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .feature-card:hover::before { opacity: 1; }
-
-    .feature-card:hover {
-      border-color: rgba(0, 210, 106, 0.3);
-      transform: translateY(-4px);
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
-    }
-
-    .feature-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      margin-bottom: 24px;
-    }
-
-    .feature-icon.green { background: var(--green-dim); }
-    .feature-icon.earth { background: var(--earth-dim); }
-    .feature-icon.mixed {
-      background: linear-gradient(135deg, var(--green-dim), var(--earth-dim));
-    }
-
-    .feature-card h3 {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
-    }
-
-    .feature-card p {
-      font-size: 15px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    /* ── HOW IT WORKS ── */
-    .how-it-works { background: var(--bg); }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 40px;
-      margin-top: 80px;
-      position: relative;
-    }
-
-    .steps::before {
-      content: '';
-      position: absolute;
-      top: 52px;
-      left: 15%;
-      right: 15%;
-      height: 2px;
-      background: linear-gradient(90deg, var(--green), var(--earth), var(--green));
-      opacity: 0.3;
-    }
-
-    .step {
-      text-align: center;
-      position: relative;
-    }
-
-    .step-number {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: var(--bg-elevated);
-      border: 2px solid var(--green);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--green);
-      margin: 0 auto 28px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-icon {
-      font-size: 40px;
-      margin-bottom: 20px;
-    }
-
-    .step h3 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
-    }
-
-    .step p {
-      font-size: 15px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 300px;
-      margin: 0 auto;
-    }
-
-    /* ── SWARM VIZ ── */
-    .swarm-viz {
-      background: var(--bg-elevated);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 100px 24px;
-      text-align: center;
-    }
-
-    #swarm-demo {
-      width: 100%;
-      max-width: 900px;
-      height: 400px;
-      margin: 48px auto 0;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: var(--bg);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .swarm-status {
-      display: flex;
-      gap: 32px;
-      justify-content: center;
-      margin-top: 32px;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .status-dot.active { background: var(--green); }
-    .status-dot.syncing { background: var(--earth); animation-delay: 0.5s; }
-    .status-dot.scanning { background: #58a6ff; animation-delay: 1s; }
-
-    /* ── USE CASES ── */
-    .use-cases { background: var(--bg); }
-
-    .cases-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-      margin-top: 64px;
-    }
-
-    .case-card {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .case-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-    }
-
-    .case-visual {
-      height: 200px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .case-visual canvas {
-      width: 100%;
-      height: 100%;
-    }
-
-    .case-content {
-      padding: 32px;
-    }
-
-    .case-tag {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--green);
-      margin-bottom: 12px;
-    }
-
-    .case-card h3 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
-    }
-
-    .case-card p {
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    /* ── TECH STACK ── */
-    .tech {
-      background: var(--bg-elevated);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tech-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: start;
-      margin-top: 64px;
-    }
-
-    .tech-layers {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .tech-layer {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px 28px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      transition: border-color 0.3s, transform 0.2s;
-      cursor: default;
-    }
-
-    .tech-layer:hover {
-      border-color: var(--green);
-      transform: translateX(8px);
-    }
-
-    .layer-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-
-    .layer-icon.edge { background: #da3633aa; }
-    .layer-icon.ai { background: #a371f7aa; }
-    .layer-icon.mesh { background: var(--green-dim); }
-    .layer-icon.ui { background: #58a6ffaa; }
-    .layer-icon.data { background: var(--earth-dim); }
-
-    .layer-info h4 {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .layer-info p {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .tech-specs {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 40px;
-    }
-
-    .tech-specs h3 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 28px;
-      letter-spacing: -0.5px;
-    }
-
-    .spec-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .spec-row:last-child { border-bottom: none; }
-
-    .spec-label {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .spec-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--green);
-      text-align: right;
-    }
-
-    /* ── CTA ── */
-    .cta-section {
-      background: var(--bg);
-      text-align: center;
-      padding: 160px 24px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      width: 600px;
-      height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, var(--green-dim), transparent 70%);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    .cta-content {
-      position: relative;
-      z-index: 1;
-    }
-
-    .cta-section h2 {
-      font-size: clamp(36px, 5vw, 64px);
-      font-weight: 900;
-      letter-spacing: -2px;
-      margin-bottom: 20px;
-      line-height: 1.05;
-    }
-
-    .cta-section p {
-      font-size: 18px;
-      color: var(--text-muted);
-      margin-bottom: 40px;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.6;
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      padding: 48px 24px;
-      border-top: 1px solid var(--border);
-      background: var(--bg);
-    }
-
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-left {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-left strong {
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover { color: var(--green); }
-
-    /* ── ANIMATIONS ── */
-    .reveal {
-      opacity: 0;
-      transform: translateY(40px);
-      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 968px) {
-      nav { padding: 0 24px; }
-
-      .nav-links { display: none; }
-      .nav-hamburger { display: flex; }
-
-      .nav-links.open {
-        display: flex;
-        flex-direction: column;
-        position: absolute;
-        top: 72px;
-        left: 0;
-        right: 0;
-        background: var(--bg-elevated);
-        border-bottom: 1px solid var(--border);
-        padding: 24px;
-        gap: 20px;
-      }
-
-      .problem-grid {
-        grid-template-columns: 1fr;
-        gap: 48px;
-      }
-
-      .problem-visual { display: none; }
-
-      .solution-features,
-      .steps,
-      .cases-grid {
-        grid-template-columns: 1fr;
-        max-width: 480px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .steps::before { display: none; }
-
-      .tech-layout {
-        grid-template-columns: 1fr;
-        gap: 40px;
-      }
-
-      .hero-metrics {
-        gap: 24px;
-        flex-wrap: wrap;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .hero h1 { letter-spacing: -1.5px; }
-      .hero-actions { flex-direction: column; align-items: center; }
-      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
-      section { padding: 80px 16px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enjambre — Decentralized Drone Swarm Coordination</title>
+<meta name="description" content="Enjambre: Decentralized drone swarm coordination for precision agriculture. Deploy, coordinate, conquer — without a central server.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --dark:#0d1117;--dark-green:#0a140e;--dark-earth:#14110d;
+  --surface:#161b22;--surface2:#1c2128;
+  --green:#00d26a;--earth:#c8a96e;--lime:#7ee787;--cyan:#58a6ff;
+  --text1:#e6edf3;--text2:#8b949e;--text3:#484f58;--white:#ffffff;
+  --head:'Space Grotesk',sans-serif;
+  --body:'Inter',sans-serif;
+  --spring:cubic-bezier(0.34,1.56,0.64,1);
+  --smooth:cubic-bezier(0.22,1,0.36,1);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+html{font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--dark);color:var(--text1);overflow-x:hidden;line-height:1.6;cursor:none}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--body);cursor:none;border:none;background:none;color:inherit}
+img{display:block;max-width:100%}
+
+/* Typography */
+.display{font-family:var(--head);font-size:clamp(3rem,8vw,6rem);font-weight:700;letter-spacing:-0.04em;line-height:0.95;color:var(--white)}
+.h2-title{font-family:var(--head);font-size:clamp(2rem,4vw,3.5rem);font-weight:600;letter-spacing:-0.03em;line-height:1.1;color:var(--white)}
+.h3-title{font-family:var(--head);font-size:clamp(1.2rem,2vw,1.5rem);font-weight:600;color:var(--white)}
+.body-text{font-size:1.05rem;font-weight:400;line-height:1.7;color:var(--text2)}
+.caption{font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.15em;color:var(--text3)}
+.gradient-text{background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gradient-text-warm{background:linear-gradient(135deg,var(--earth),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Breathing */
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.005)}}
+.breathe{animation:breathe 4s ease-in-out infinite}
+
+/* Cursor */
+.cursor-dot{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--green);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:screen;transition:width .25s var(--spring),height .25s var(--spring),background .25s}
+.cursor-ring{position:fixed;top:0;left:0;width:36px;height:36px;border:1.5px solid rgba(0,210,106,.45);border-radius:50%;pointer-events:none;z-index:9998;transition:width .35s var(--spring),height .35s var(--spring),border-color .3s}
+.cursor-dot.active{width:48px;height:48px;background:rgba(0,210,106,.18)}
+.cursor-ring.active{width:56px;height:56px;border-color:var(--earth)}
+@media(pointer:coarse){.cursor-dot,.cursor-ring{display:none}body{cursor:auto}button{cursor:auto}a{cursor:auto}}
+
+/* Scroll Progress */
+.scroll-progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--green),var(--cyan),var(--earth));z-index:10001;width:0;transform-origin:left;will-change:width}
+
+/* Noise */
+.noise{position:fixed;top:-50%;left:-50%;width:200%;height:200%;pointer-events:none;z-index:9000;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* Brand Pattern */
+.brand-pattern{position:absolute;inset:0;pointer-events:none;opacity:.02;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 30 L20 10 L30 30 L40 10 L50 30' fill='none' stroke='%2300d26a' stroke-width='0.5'/%3E%3Ccircle cx='30' cy='30' r='2' fill='none' stroke='%2300d26a' stroke-width='0.5'/%3E%3C/svg%3E");background-size:60px 60px}
+
+/* Mesh BG */
+.mesh-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.mesh-orb{position:absolute;border-radius:50%;filter:blur(120px);will-change:transform;mix-blend-mode:screen}
+.mesh-orb.a{width:55vw;height:55vw;top:-15%;left:-10%;background:radial-gradient(circle,rgba(0,210,106,.14),transparent 70%)}
+.mesh-orb.b{width:45vw;height:45vw;bottom:-10%;right:-10%;background:radial-gradient(circle,rgba(88,166,255,.10),transparent 70%)}
+.mesh-orb.c{width:35vw;height:35vw;top:40%;left:50%;background:radial-gradient(circle,rgba(200,169,110,.07),transparent 70%)}
+
+/* Nav */
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:20px 0;transition:all .4s var(--smooth)}
+.nav.shrink{padding:12px 0;background:rgba(13,17,23,.92);backdrop-filter:blur(24px) saturate(1.4);border-bottom:1px solid rgba(0,210,106,.08)}
+.nav-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px);display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:var(--head);font-weight:700;font-size:1.6rem;letter-spacing:-.03em;display:flex;align-items:center;gap:0}
+.nav-logo svg{height:28px;width:auto}
+.nav-links{display:flex;gap:32px;align-items:center}
+.nav-links a{font-size:.85rem;font-weight:500;color:var(--text2);transition:color .3s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1.5px;background:var(--green);transition:width .3s var(--spring)}
+.nav-links a:hover{color:var(--white)}
+.nav-links a:hover::after{width:100%}
+.nav-cta{font-size:.85rem;font-weight:600;padding:10px 24px;border-radius:80px;background:var(--green);color:var(--dark);transition:all .3s var(--spring);position:relative;overflow:hidden}
+.nav-cta::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transform:translateX(-100%);transition:none}
+.nav-cta:hover::before{transform:translateX(100%);transition:transform .6s}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,210,106,.4)}
+.nav-mobile-btn{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer}
+.nav-mobile-btn span{width:22px;height:2px;background:var(--text1);border-radius:2px;transition:all .3s}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .nav-mobile-btn{display:flex}
+  .nav-links.open{display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:rgba(13,17,23,.96);backdrop-filter:blur(24px);padding:24px;gap:20px;border-bottom:1px solid rgba(0,210,106,.1)}
+}
+
+/* Hero */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;z-index:1;overflow:hidden;padding:120px 0 80px;background:var(--dark)}
+.hero .brand-pattern{z-index:0}
+.hero-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px);display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(32px,4vw,60px);align-items:center;position:relative;z-index:2}
+.hero-content{position:relative;z-index:2}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 16px 6px 8px;border-radius:80px;border:1px solid rgba(0,210,106,.25);background:rgba(0,210,106,.06);font-size:.75rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--green);width:fit-content;margin-bottom:24px;opacity:0;transform:translateY(20px)}
+.hero-tag .pulse{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+.hero-headline{margin-bottom:24px}
+.hero-headline .char{display:inline-block;opacity:0;transform:translateY(60px) rotate(8deg);will-change:transform,opacity}
+.hero-headline .word{display:inline-block;white-space:pre}
+.hero-sub{font-size:clamp(1rem,1.6vw,1.15rem);color:var(--text2);max-width:480px;line-height:1.7;margin-bottom:40px;opacity:0;transform:translateY(30px)}
+.hero-ctas{display:flex;gap:16px;flex-wrap:wrap;opacity:0;transform:translateY(30px)}
+.btn-primary{position:relative;display:inline-flex;align-items:center;gap:10px;padding:16px 36px;border-radius:80px;background:var(--green);color:var(--dark);font-weight:600;font-size:1rem;overflow:hidden;transition:all .35s var(--spring)}
+.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-100%)}
+.btn-primary:hover::before{transform:translateX(100%);transition:transform .7s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,210,106,.4)}
+.btn-primary .arrow{transition:transform .3s}.btn-primary:hover .arrow{transform:translateX(4px)}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:16px 32px;border-radius:80px;border:1px solid rgba(230,237,243,.15);color:var(--text1);font-weight:500;font-size:1rem;transition:all .3s var(--spring);backdrop-filter:blur(8px)}
+.btn-ghost:hover{border-color:var(--earth);color:var(--earth);transform:translateY(-2px);box-shadow:0 8px 20px rgba(200,169,110,.2)}
+
+/* Hero Canvas */
+.hero-canvas-wrap{position:relative;display:flex;justify-content:center;align-items:center;min-height:400px}
+.hero-canvas-glow{position:absolute;width:80%;height:80%;border-radius:50%;background:radial-gradient(circle,rgba(0,210,106,.15),rgba(88,166,255,.08),transparent 70%);filter:blur(60px);z-index:0}
+#swarmCanvas{position:relative;z-index:1;border-radius:24px;border:1px solid rgba(0,210,106,.1);background:rgba(13,17,23,.5);backdrop-filter:blur(8px)}
+
+@media(max-width:768px){
+  .hero-inner{grid-template-columns:1fr;text-align:center}
+  .hero-sub{margin-left:auto;margin-right:auto}
+  .hero-ctas{justify-content:center}
+  .hero-canvas-wrap{order:-1;margin-bottom:20px;min-height:260px}
+  #swarmCanvas{width:100% !important;height:260px !important}
+}
+
+/* Marquee */
+.marquee-section{position:relative;z-index:1;padding:24px 0;border-top:1px solid rgba(0,210,106,.08);border-bottom:1px solid rgba(0,210,106,.08);overflow:hidden;background:rgba(22,27,34,.6)}
+.marquee-track{display:flex;gap:48px;animation:marquee 35s linear infinite;width:max-content}
+.marquee-item{white-space:nowrap;font-size:.85rem;color:var(--text2);display:flex;align-items:center;gap:12px;font-weight:500}
+.marquee-item .sep{width:6px;height:6px;background:var(--green);border-radius:50%;opacity:.5}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* Reveal Animations */
+.reveal{opacity:0;transform:translateY(48px) scale(.97);transition:all .9s var(--spring)}.reveal.visible{opacity:1;transform:translateY(-4px) scale(1.003);animation:settleBack .4s .9s var(--smooth) forwards}
+@keyframes settleBack{to{transform:translateY(0) scale(1)}}
+.reveal-left{opacity:0;transform:translateX(-60px) rotate(-3deg);transition:all .9s var(--spring)}.reveal-left.visible{opacity:1;transform:translateX(0) rotate(0)}
+.reveal-right{opacity:0;transform:translateX(60px) rotate(3deg);transition:all .9s var(--spring)}.reveal-right.visible{opacity:1;transform:translateX(0) rotate(0)}
+.stagger-child{opacity:0;transform:translateY(40px) scale(.96);transition:all .8s var(--spring)}.stagger-child.visible{opacity:1;transform:none}
+
+/* Problem */
+.problem{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark-earth);overflow:hidden}
+.problem .brand-pattern{z-index:0}
+.problem-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px);position:relative}
+.problem-big-number{font-family:var(--head);font-size:clamp(10rem,18vw,20rem);font-weight:700;letter-spacing:-.06em;line-height:.85;color:rgba(255,255,255,.03);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;user-select:none;white-space:nowrap}
+.problem-content{position:relative;z-index:1}
+.problem-label{font-size:clamp(1.2rem,2.2vw,1.6rem);color:var(--text2);margin-bottom:clamp(48px,6vw,80px);max-width:600px;line-height:1.6}
+.problem-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.problem-card{background:var(--surface);border:1px solid rgba(0,210,106,.06);border-left:3px solid var(--earth);border-radius:20px;padding:clamp(28px,3vw,40px);position:relative;overflow:hidden;transition:all .45s var(--spring)}
+.problem-card:nth-child(2){border-left-color:var(--green);margin-top:32px}
+.problem-card:nth-child(3){border-left-color:var(--cyan);margin-top:64px}
+.problem-card:hover{border-color:rgba(0,210,106,.2);transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.problem-card .num{font-family:var(--head);font-size:clamp(2.5rem,4vw,3.5rem);font-weight:700;letter-spacing:-.03em;margin-bottom:12px}
+.problem-card .num.earth{color:var(--earth)}
+.problem-card .num.green{color:var(--green)}
+.problem-card .num.cyan{color:var(--cyan)}
+.problem-card h3{font-family:var(--head);font-size:1.15rem;font-weight:600;margin-bottom:10px;color:var(--white)}
+.problem-card p{font-size:.9rem;color:var(--text2);line-height:1.65}
+@media(max-width:768px){.problem-cards{grid-template-columns:1fr}.problem-card:nth-child(2),.problem-card:nth-child(3){margin-top:0}}
+
+/* Solution */
+.solution{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark-green);overflow:hidden}
+.solution-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px)}
+.pillars-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:clamp(40px,6vw,72px)}
+.pillar-card{background:var(--surface);border:1px solid rgba(0,210,106,.06);border-radius:24px;padding:clamp(32px,3vw,48px);position:relative;overflow:hidden;transition:all .5s var(--spring)}
+.pillar-card:hover{border-color:rgba(0,210,106,.2);transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.pillar-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.pillar-card:nth-child(1)::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.pillar-card:nth-child(2)::before{background:linear-gradient(90deg,var(--cyan),var(--earth))}
+.pillar-card:nth-child(3)::before{background:linear-gradient(90deg,var(--earth),var(--green))}
+.pillar-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.pillar-card:nth-child(1) .pillar-icon{background:rgba(0,210,106,.1)}
+.pillar-card:nth-child(2) .pillar-icon{background:rgba(88,166,255,.1)}
+.pillar-card:nth-child(3) .pillar-icon{background:rgba(200,169,110,.1)}
+.pillar-card h3{font-family:var(--head);font-size:1.3rem;font-weight:600;color:var(--white);margin-bottom:12px}
+.pillar-card p{font-size:.9rem;color:var(--text2);line-height:1.7}
+@media(max-width:768px){.pillars-grid{grid-template-columns:1fr}}
+
+/* How it Works */
+.how-it-works{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark);overflow:hidden}
+.how-inner{max-width:1100px;margin:0 auto;padding:0 clamp(20px,3vw,48px)}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:clamp(40px,6vw,72px);position:relative}
+.steps-grid::before{content:'';position:absolute;top:60px;left:calc(16.66% + 16px);right:calc(16.66% + 16px);height:2px;background:linear-gradient(90deg,var(--green),var(--cyan),var(--earth));opacity:.3}
+.step-card{text-align:center;position:relative}
+.step-num{font-family:var(--head);font-size:3rem;font-weight:700;color:rgba(0,210,106,.15);margin-bottom:16px}
+.step-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;position:relative}
+.step-card:nth-child(1) .step-icon{background:rgba(0,210,106,.08);border:2px solid rgba(0,210,106,.2)}
+.step-card:nth-child(2) .step-icon{background:rgba(88,166,255,.08);border:2px solid rgba(88,166,255,.2)}
+.step-card:nth-child(3) .step-icon{background:rgba(200,169,110,.08);border:2px solid rgba(200,169,110,.2)}
+.step-card h3{font-family:var(--head);font-size:1.2rem;font-weight:600;color:var(--white);margin-bottom:8px}
+.step-card p{font-size:.9rem;color:var(--text2);line-height:1.65;max-width:280px;margin:0 auto}
+@media(max-width:768px){.steps-grid{grid-template-columns:1fr;gap:48px}.steps-grid::before{display:none}}
+
+/* Bento Grid */
+.bento{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark-green)}
+.bento-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px)}
+.bento-header{text-align:center;margin-bottom:clamp(40px,6vw,72px)}
+.bento-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:auto;gap:16px}
+.bento-grid .card:nth-child(1),.bento-grid .card:nth-child(4){grid-column:span 2}
+.bento-card{background:var(--surface);border:1px solid rgba(0,210,106,.06);border-radius:20px;padding:clamp(24px,2.5vw,36px);position:relative;overflow:hidden;transition:all .45s var(--spring)}
+.bento-card:hover{border-color:rgba(0,210,106,.2);transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.ic-green{background:rgba(0,210,106,.1);color:var(--green)}
+.ic-cyan{background:rgba(88,166,255,.1);color:var(--cyan)}
+.ic-earth{background:rgba(200,169,110,.1);color:var(--earth)}
+.ic-lime{background:rgba(126,231,135,.1);color:var(--lime)}
+.bento-card h3{margin-bottom:10px}
+.bento-card p{font-size:.88rem;color:var(--text2);line-height:1.65}
+.mini-preview{margin-top:16px;padding:12px;background:rgba(0,210,106,.03);border-radius:12px;border:1px solid rgba(0,210,106,.06)}
+@media(max-width:768px){.bento-grid{grid-template-columns:1fr}.bento-grid .card:nth-child(1),.bento-grid .card:nth-child(4){grid-column:span 1}}
+
+/* Use Cases */
+.use-cases{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark-earth);overflow:hidden}
+.use-cases-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px)}
+.use-cases-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:clamp(40px,6vw,72px)}
+.use-case-card{border-radius:24px;padding:clamp(32px,3vw,48px);position:relative;overflow:hidden;transition:all .5s var(--spring);min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid rgba(255,255,255,.05)}
+.use-case-card:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(0,0,0,.4)}
+.use-case-card::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(13,17,23,.9));pointer-events:none}
+.use-case-card:nth-child(1){background:linear-gradient(135deg,rgba(0,210,106,.12),rgba(0,210,106,.02))}
+.use-case-card:nth-child(2){background:linear-gradient(135deg,rgba(88,166,255,.12),rgba(88,166,255,.02))}
+.use-case-card:nth-child(3){background:linear-gradient(135deg,rgba(200,169,110,.12),rgba(200,169,110,.02))}
+.use-case-card .uc-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;position:relative;z-index:1;backdrop-filter:blur(8px)}
+.use-case-card:nth-child(1) .uc-icon{background:rgba(0,210,106,.15)}
+.use-case-card:nth-child(2) .uc-icon{background:rgba(88,166,255,.15)}
+.use-case-card:nth-child(3) .uc-icon{background:rgba(200,169,110,.15)}
+.use-case-card h3{font-family:var(--head);font-size:1.3rem;font-weight:600;color:var(--white);margin-bottom:8px;position:relative;z-index:1}
+.use-case-card p{font-size:.88rem;color:var(--text2);line-height:1.65;position:relative;z-index:1}
+.uc-float{position:absolute;opacity:.08;z-index:0}
+@media(max-width:768px){.use-cases-grid{grid-template-columns:1fr}}
+
+/* Demo Section */
+.demo{position:relative;z-index:1;padding:clamp(80px,12vw,160px) 0;background:var(--dark);overflow:hidden}
+.demo-inner{max-width:900px;margin:0 auto;padding:0 clamp(20px,3vw,48px);text-align:center}
+.demo-canvas-wrap{position:relative;margin-top:40px;display:flex;justify-content:center}
+#demoCanvas{border-radius:20px;border:1px solid rgba(0,210,106,.1);background:rgba(22,27,34,.6);backdrop-filter:blur(8px)}
+.demo-controls{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+.demo-btn{padding:10px 24px;border-radius:80px;font-size:.85rem;font-weight:500;color:var(--text2);border:1px solid rgba(0,210,106,.15);background:rgba(0,210,106,.04);transition:all .3s var(--spring);cursor:none}
+.demo-btn:hover,.demo-btn.active{background:var(--green);color:var(--dark);border-color:var(--green);box-shadow:0 4px 16px rgba(0,210,106,.3)}
+
+/* Stats */
+.stats{position:relative;z-index:1;padding:clamp(80px,12vw,140px) 0;background:var(--dark-green);border-top:1px solid rgba(0,210,106,.06);border-bottom:1px solid rgba(0,210,106,.06)}
+.stats-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px);display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+.stat-item .stat-num{font-family:var(--head);font-size:clamp(2.5rem,6vw,4rem);font-weight:700;letter-spacing:-.04em;color:var(--white);margin-bottom:8px;line-height:1}
+.stat-item .stat-label{font-size:.75rem;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.1em}
+@media(max-width:768px){.stats-inner{grid-template-columns:repeat(2,1fr);gap:32px}}
+
+/* CTA */
+.cta-section{position:relative;z-index:1;padding:clamp(100px,15vw,200px) 0;overflow:hidden;background:var(--dark)}
+.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,210,106,.08),transparent 70%)}
+.cta-inner{max-width:680px;margin:0 auto;padding:0 clamp(20px,3vw,48px);text-align:center;position:relative;z-index:1}
+.cta-inner h2{font-family:var(--head);font-size:clamp(1.8rem,4vw,3rem);font-weight:700;letter-spacing:-.03em;color:var(--white);margin-bottom:16px;line-height:1.15}
+.cta-inner p{font-size:1.05rem;color:var(--text2);margin-bottom:36px;line-height:1.7}
+
+/* Footer */
+.footer{position:relative;z-index:1;padding:48px 0;border-top:1px solid rgba(0,210,106,.06);background:var(--dark)}
+.footer-inner{max-width:1280px;margin:0 auto;padding:0 clamp(20px,3vw,48px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-left{display:flex;align-items:center;gap:24px}
+.footer-logo{font-family:var(--head);font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:0}
+.footer-logo svg{height:22px;width:auto}
+.footer-links{display:flex;gap:20px;font-size:.82rem;color:var(--text3)}
+.footer-links a:hover{color:var(--text1)}
+.footer-badge{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--text3);padding:6px 14px;border-radius:80px;border:1px solid rgba(0,210,106,.1);background:rgba(0,210,106,.04);font-weight:500;letter-spacing:.03em}
+.footer-badge .chain-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s ease infinite}
+@media(max-width:600px){.footer-inner{flex-direction:column;text-align:center}.footer-left{flex-direction:column}}
+
+/* Floating elements */
+@keyframes floatDrone{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(10px,-15px) rotate(3deg)}50%{transform:translate(-5px,-20px) rotate(-2deg)}75%{transform:translate(-10px,-8px) rotate(1deg)}}
+
+/* Language Selector */
+.lang-selector{position:fixed;top:20px;right:clamp(20px,3vw,48px);z-index:10001}
+.lang-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:80px;background:rgba(13,17,23,.8);border:1px solid rgba(0,210,106,.15);font-size:.8rem;color:var(--text2);cursor:none;transition:all .2s;backdrop-filter:blur(12px);font-family:var(--body)}
+.lang-btn:hover{border-color:var(--green);color:var(--white)}
+.lang-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;background:rgba(13,17,23,.95);border:1px solid rgba(0,210,106,.15);border-radius:12px;overflow:hidden;min-width:160px;box-shadow:0 12px 40px rgba(0,0,0,.5);backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-option{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:.8rem;color:var(--text2);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:left;font-family:var(--body)}
+.lang-option:hover{background:rgba(0,210,106,.1);color:var(--white)}
+.lang-option.active{color:var(--green);font-weight:600}
+@media(pointer:coarse){.lang-btn,.lang-option,.demo-btn{cursor:auto}}
+.nav.shrink ~ .lang-selector,.nav.shrink + .lang-selector{top:14px}
+
+/* Toast */
+.toast{position:fixed;top:24px;right:24px;padding:16px 28px;border-radius:14px;font-size:.9rem;font-weight:500;color:var(--white);z-index:10002;transform:translateX(120%);transition:transform .5s var(--spring);font-family:var(--body);box-shadow:0 12px 36px rgba(0,0,0,.4)}
+.toast.show{transform:translateX(0)}
+.toast.success{background:linear-gradient(135deg,var(--green),#059669);border:1px solid rgba(0,210,106,.4)}
+.toast.error{background:linear-gradient(135deg,#ef4444,#dc2626);border:1px solid rgba(239,68,68,.4)}
+
+/* Mini telemetry bars */
+.mini-telem{display:flex;gap:4px;align-items:flex-end;height:32px}
+.mini-telem-bar{width:6px;border-radius:2px;background:var(--green);animation:telemPulse 2s ease-in-out infinite}
+.mini-telem-bar:nth-child(1){height:40%;animation-delay:0s}
+.mini-telem-bar:nth-child(2){height:70%;animation-delay:.2s}
+.mini-telem-bar:nth-child(3){height:55%;animation-delay:.4s}
+.mini-telem-bar:nth-child(4){height:85%;animation-delay:.6s}
+.mini-telem-bar:nth-child(5){height:45%;animation-delay:.8s}
+.mini-telem-bar:nth-child(6){height:65%;animation-delay:1s}
+.mini-telem-bar:nth-child(7){height:90%;animation-delay:1.2s}
+.mini-telem-bar:nth-child(8){height:50%;animation-delay:1.4s}
+@keyframes telemPulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* Mini mesh visualization */
+.mini-mesh{display:flex;justify-content:center;align-items:center;gap:0;position:relative;height:48px}
+.mesh-node{width:10px;height:10px;border-radius:50%;position:absolute;border:1.5px solid}
+.mesh-node:nth-child(1){left:20%;top:10%;border-color:var(--green);background:rgba(0,210,106,.2)}
+.mesh-node:nth-child(2){left:50%;top:5%;border-color:var(--cyan);background:rgba(88,166,255,.2)}
+.mesh-node:nth-child(3){left:75%;top:15%;border-color:var(--green);background:rgba(0,210,106,.2)}
+.mesh-node:nth-child(4){left:35%;top:60%;border-color:var(--earth);background:rgba(200,169,110,.2)}
+.mesh-node:nth-child(5){left:65%;top:55%;border-color:var(--green);background:rgba(0,210,106,.2)}
+</style>
 </head>
 <body>
+<!-- Language Selector -->
+<div class="lang-selector" id="lang-selector">
+  <button class="lang-btn" onclick="toggleLangDropdown()">&#127760; <span id="lang-current">English</span> &#9662;</button>
+  <div class="lang-dropdown" id="lang-dropdown">
+    <button class="lang-option active" data-lang="en" onclick="setLang('en')">&#127468;&#127463; English</button>
+    <button class="lang-option" data-lang="es" onclick="setLang('es')">&#127466;&#127480; Espa&ntilde;ol</button>
+    <button class="lang-option" data-lang="zh" onclick="setLang('zh')">&#127464;&#127475; &#20013;&#25991;</button>
+  </div>
+</div>
 
-  <!-- NAV -->
-  <nav>
+<div class="noise"></div>
+<div class="mesh-bg"><div class="mesh-orb a"></div><div class="mesh-orb b"></div><div class="mesh-orb c"></div></div>
+<div class="cursor-dot"></div><div class="cursor-ring"></div>
+<div class="scroll-progress"></div>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
     <a href="#" class="nav-logo">
-      <div class="logo-icon">E</div>
-      Enjambre
+      <svg viewBox="0 0 220 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- E with drone -->
+        <rect x="2" y="6" width="16" height="20" rx="2" fill="none" stroke="#fff" stroke-width="2.5"/>
+        <line x1="2" y1="16" x2="14" y2="16" stroke="#fff" stroke-width="2.5"/>
+        <!-- Drone on E -->
+        <line x1="6" y1="3" x2="14" y2="3" stroke="#00d26a" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4" y1="3" x2="8" y2="3" stroke="#00d26a" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+        <line x1="12" y1="3" x2="16" y2="3" stroke="#00d26a" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+        <circle cx="10" cy="5" r="1" fill="#00d26a"/>
+        <!-- N with wave connection to M -->
+        <path d="M24 26V6l12 20V6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Wave connection NM -->
+        <path d="M36 16 Q40 8 44 16 Q48 24 52 16" stroke="#00d26a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+        <!-- J -->
+        <path d="M56 6v14c0 4-3 6-6 6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- A -->
+        <path d="M62 26L70 6l8 20M65 19h10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- M with wave connection from N -->
+        <path d="M84 26V6l8 14 8-14v20" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- B -->
+        <path d="M106 6v20M106 6h8c3 0 5 2 5 5s-2 5-5 5h-8m0 0h9c3 0 5 2 5 5s-2 5-5 5h-9" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- R -->
+        <path d="M130 6v20M130 6h8c3 0 6 2 6 5s-3 5-6 5h-8m5 0l6 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- E -->
+        <path d="M152 6h14M152 6v20h14M152 16h10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Green glow filter -->
+        <defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs>
+      </svg>
     </a>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="#problem" data-i18n="navProblem">Problem</a></li>
-      <li><a href="#solution" data-i18n="navSolution">Solution</a></li>
-      <li><a href="#how" data-i18n="navProcess">Process</a></li>
-      <li><a href="#cases" data-i18n="navCases">Use Cases</a></li>
-      <li><a href="#tech" data-i18n="navStack">Stack</a></li>
-      <li><a href="#cta" class="nav-cta" data-i18n="navJoin">Join the Swarm</a></li>
-      <li class="lang-selector">
-        <button class="lang-btn" id="langBtn" onclick="event.preventDefault();toggleLangDropdown()">&#127760; EN</button>
-        <div class="lang-dropdown" id="langDropdown">
-          <div class="lang-option active" data-lang="en" onclick="setLang('en')">&#127468;&#127463; English</div>
-          <div class="lang-option" data-lang="es" onclick="setLang('es')">&#127466;&#127480; Espa&ntilde;ol</div>
-          <div class="lang-option" data-lang="zh" onclick="setLang('zh')">&#127464;&#127475; &#20013;&#25991;</div>
-        </div>
-      </li>
-    </ul>
-    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
+    <div class="nav-links" id="navLinks">
+      <a href="#problem" data-i18n="nav_problem">Problem</a>
+      <a href="#solution" data-i18n="nav_solution">Solution</a>
+      <a href="#features" data-i18n="nav_features">Features</a>
+      <a href="#use-cases" data-i18n="nav_use_cases">Use Cases</a>
+      <a href="#demo" data-i18n="nav_demo">Demo</a>
+      <a href="app.html" data-i18n="nav_app">Dashboard</a>
+    </div>
+    <a href="app.html" class="nav-cta magnetic" data-i18n="start_coordinating">Start Coordinating</a>
+    <button class="nav-mobile-btn" id="menuBtn" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <canvas id="swarm-canvas"></canvas>
-    <div class="hero-gradient"></div>
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="brand-pattern"></div>
+  <div class="hero-inner">
     <div class="hero-content">
-      <div class="hero-badge">
-        <span class="pulse"></span>
-        The Vertex Swarm Challenge 2026
-      </div>
-      <h1>
-        <span class="line" data-i18n="heroLine1">Coordinate.</span>
-        <span class="line green" data-i18n="heroLine2">Cultivate.</span>
-        <span class="line earth" data-i18n="heroLine3">Conquer.</span>
+      <div class="hero-tag"><span class="pulse"></span><span data-i18n="hero_tag">Decentralized Drone Swarm</span></div>
+      <h1 class="hero-headline display" id="heroHeadline">
+        <span class="word" data-i18n-word="hero_w1">Coordinate. </span><br>
+        <span class="word gradient-text" data-i18n-word="hero_w2">Cultivate. </span><br>
+        <span class="word gradient-text-warm" data-i18n-word="hero_w3">Conquer.</span>
       </h1>
-      <p class="hero-sub" data-i18n="heroSub">
-        Decentralized swarm coordination for agricultural drones.
-        No servers. No limits. Just collective intelligence flying over the land.
-      </p>
-      <div class="hero-actions">
-        <a href="#how" class="btn-primary" data-i18n="heroAction">See It In Action &#8594;</a>
-        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank">GitHub &#8599;</a>
-      </div>
-      <div class="hero-metrics">
-        <div class="metric">
-          <div class="metric-value">40%</div>
-          <div class="metric-label" data-i18n="metricLand">World's arable land in LATAM</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value">$65B</div>
-          <div class="metric-label" data-i18n="metricLost">Lost annually to inefficiency</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value">0</div>
-          <div class="metric-label" data-i18n="metricServers">Central servers required</div>
-        </div>
+      <p class="hero-sub body-text" id="heroSub" data-i18n="hero_sub">The first fully decentralized drone swarm coordination platform. No central server. No single point of failure. Just pure, autonomous agricultural intelligence.</p>
+      <div class="hero-ctas" id="heroCtas">
+        <a href="app.html" class="btn-primary magnetic" data-i18n="start_coordinating_btn">Start Coordinating <span class="arrow">&rarr;</span></a>
+        <button class="btn-ghost magnetic" data-i18n="watch_demo">Watch Demo <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
       </div>
     </div>
-  </section>
-
-  <!-- PROBLEM -->
-  <section class="problem" id="problem">
-    <div class="container">
-      <div class="problem-grid">
-        <div>
-          <div class="section-label reveal" data-i18n="navProblem">The Problem</div>
-          <h2 class="section-title reveal reveal-delay-1" data-i18n="problemTitle">The land produces.<br>Technology <span style="color:var(--earth)">doesn't reach it.</span></h2>
-          <p class="section-subtitle reveal reveal-delay-2" data-i18n="problemSub">
-            Agricultural drones exist, but they fly alone. They don't coordinate, don't share data, don't scale.
-            Precision agriculture is a privilege of those with connectivity and capital.
-          </p>
-          <div class="problem-stats reveal reveal-delay-3" style="margin-top:40px">
-            <div class="stat-card">
-              <div class="stat-number">73%</div>
-              <div class="stat-desc" data-i18n="stat1">LATAM farmers without access to precision technology</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">2.4x</div>
-              <div class="stat-desc" data-i18n="stat2">Pesticide overuse due to lack of real-time data</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">35%</div>
-              <div class="stat-desc" data-i18n="stat3">Water wasted in irrigation without coordinated sensors</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">1</div>
-              <div class="stat-desc" data-i18n="stat4">Single point of failure in centralized systems</div>
-            </div>
-          </div>
-        </div>
-        <div class="problem-visual">
-          <div class="field-grid" id="fieldGrid"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SOLUTION -->
-  <section class="solution" id="solution">
-    <div class="container">
-      <div class="section-label reveal" data-i18n="navSolution">The Solution</div>
-      <h2 class="section-title reveal reveal-delay-1" data-i18n="solutionTitle">BitTorrent for<br><span style="color:var(--green)">agriculture.</span></h2>
-      <p class="section-subtitle reveal reveal-delay-2" data-i18n="solutionSub">
-        Each drone is an autonomous node. Together they form an intelligent swarm that self-organizes,
-        shares data and acts collectively.
-      </p>
-      <div class="solution-features">
-        <div class="feature-card reveal">
-          <div class="feature-icon green">&#9670;</div>
-          <h3 data-i18n="feat1Title">Decentralized</h3>
-          <p data-i18n="feat1Desc">No central server, no single point of failure. Drones discover each other via mDNS and form an autonomous P2P mesh.</p>
-        </div>
-        <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon earth">&#9671;</div>
-          <h3 data-i18n="feat2Title">Collective Intelligence</h3>
-          <p data-i18n="feat2Desc">Each drone runs TinyML models on-device. The swarm shares inferences via MQTT for coordinated decisions in milliseconds.</p>
-        </div>
-        <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon mixed">&#9674;</div>
-          <h3 data-i18n="feat3Title">Edge-First</h3>
-          <p data-i18n="feat3Desc">Works 100% offline. Data is processed where it's generated. Syncs with the cloud when there's connectivity, not when it needs it.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="how-it-works" id="how">
-    <div class="container">
-      <div style="text-align:center">
-        <div class="section-label reveal" data-i18n="navProcess">Process</div>
-        <h2 class="section-title reveal reveal-delay-1" data-i18n="processTitle">Three steps.<br><span style="color:var(--green)">Zero complexity.</span></h2>
-      </div>
-      <div class="steps">
-        <div class="step reveal">
-          <div class="step-number">1</div>
-          <div class="step-icon">&#128752;</div>
-          <h3 data-i18n="step1Title">Deploy</h3>
-          <p data-i18n="step1Desc">Place drones at the edge of the field. They self-discover via P2P mesh and partition the terrain by decentralized consensus.</p>
-        </div>
-        <div class="step reveal reveal-delay-1">
-          <div class="step-number">2</div>
-          <div class="step-icon">&#128257;</div>
-          <h3 data-i18n="step2Title">Coordinate</h3>
-          <p data-i18n="step2Desc">The swarm shares NDVI readings, humidity and pest detection in real time. Tasks are dynamically redistributed.</p>
-        </div>
-        <div class="step reveal reveal-delay-2">
-          <div class="step-number">3</div>
-          <div class="step-icon">&#127793;</div>
-          <h3 data-i18n="step3Title">Act</h3>
-          <p data-i18n="step3Desc">Spraying, seeding and precision monitoring executed collectively. The dashboard shows live telemetry.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SWARM VISUALIZATION -->
-  <div class="swarm-viz">
-    <div class="section-label reveal" data-i18n="liveViz">Live Visualization</div>
-    <h2 class="section-title reveal reveal-delay-1" style="text-align:center" data-i18n="vizTitle">
-      Watch the <span style="color:var(--green)">swarm</span> think.
-    </h2>
-    <canvas id="swarm-demo"></canvas>
-    <div class="swarm-status reveal">
-      <div class="status-item"><span class="status-dot active"></span> <span data-i18n="vizDrones">12 Active drones</span></div>
-      <div class="status-item"><span class="status-dot syncing"></span> <span data-i18n="vizSync">Syncing data</span></div>
-      <div class="status-item"><span class="status-dot scanning"></span> <span data-i18n="vizScan">Scanning terrain</span></div>
+    <!-- SWARM CANVAS -->
+    <div class="hero-canvas-wrap" id="heroCanvasWrap">
+      <div class="hero-canvas-glow"></div>
+      <canvas id="swarmCanvas" width="480" height="400"></canvas>
     </div>
   </div>
+</section>
 
-  <!-- USE CASES -->
-  <section class="use-cases" id="cases">
-    <div class="container">
-      <div style="text-align:center">
-        <div class="section-label reveal" data-i18n="navCases">Use Cases</div>
-        <h2 class="section-title reveal reveal-delay-1" data-i18n="casesTitle">One protocol.<br><span style="color:var(--earth)">Infinite missions.</span></h2>
+<!-- MARQUEE -->
+<section class="marquee-section">
+  <div class="marquee-track" id="marqueeTrack">
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m1">47 min avg flight time</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m2">1000+ hectares per mission</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m3">Sub-100ms coordination</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m4">Zero central server</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m5">99.97% uptime</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m1">47 min avg flight time</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m2">1000+ hectares per mission</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m3">Sub-100ms coordination</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m4">Zero central server</span></span>
+    <span class="marquee-item"><span class="sep"></span><span data-i18n="m5">99.97% uptime</span></span>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <div class="brand-pattern"></div>
+  <div class="problem-inner">
+    <div class="problem-big-number" aria-hidden="true">$65B</div>
+    <div class="problem-content">
+      <div class="reveal">
+        <span class="caption" style="color:var(--earth);display:block;margin-bottom:16px" data-i18n="the_problem">The Problem</span>
+        <h2 class="h2-title" style="margin-bottom:12px" data-i18n="problem_title"><span class="gradient-text-warm">$65 billion</span> lost annually.</h2>
+        <p class="problem-label body-text" data-i18n="problem_desc">Agricultural inefficiency costs the world $65B every year. Manual processes, uncoordinated operations, and centralized systems create massive blind spots across farmland.</p>
       </div>
-      <div class="cases-grid">
-        <div class="case-card reveal">
-          <div class="case-visual" style="background: linear-gradient(135deg, #0d2818, #1a4731);">
-            <canvas class="case-canvas" data-case="agri"></canvas>
-          </div>
-          <div class="case-content">
-            <div class="case-tag" data-i18n="caseAgri">Agriculture</div>
-            <h3 data-i18n="case1Title">Precision at Scale</h3>
-            <p data-i18n="case1Desc">Coordinated spraying and monitoring across thousands of hectares. Zero overlap. Zero waste. Total coverage.</p>
-          </div>
+      <div class="problem-cards">
+        <div class="problem-card stagger-child breathe">
+          <div class="num earth" data-i18n="prob_num1">40%</div>
+          <h3 data-i18n="prob_h1">Crop Waste</h3>
+          <p data-i18n="prob_p1">Up to 40% of crops are lost due to late pest detection, poor irrigation timing, and lack of real-time field intelligence.</p>
         </div>
-        <div class="case-card reveal reveal-delay-1">
-          <div class="case-visual" style="background: linear-gradient(135deg, #1a1520, #2d1f3d);">
-            <canvas class="case-canvas" data-case="logistics"></canvas>
-          </div>
-          <div class="case-content">
-            <div class="case-tag" data-i18n="caseLogistics">Logistics</div>
-            <h3 data-i18n="case2Title">Rural Last Mile</h3>
-            <p data-i18n="case2Desc">Coordinated supply delivery in areas without road infrastructure. The swarm optimizes routes in real time.</p>
-          </div>
+        <div class="problem-card stagger-child breathe">
+          <div class="num green" data-i18n="prob_num2">72h</div>
+          <h3 data-i18n="prob_h2">Response Delay</h3>
+          <p data-i18n="prob_p2">Traditional monitoring takes up to 72 hours to detect and respond to field anomalies. By then, the damage is done.</p>
         </div>
-        <div class="case-card reveal reveal-delay-2">
-          <div class="case-visual" style="background: linear-gradient(135deg, #1a1008, #3d2810);">
-            <canvas class="case-canvas" data-case="rescue"></canvas>
-          </div>
-          <div class="case-content">
-            <div class="case-tag" data-i18n="caseRescue">Rescue</div>
-            <h3 data-i18n="case3Title">Disaster Response</h3>
-            <p data-i18n="case3Desc">Post-hurricane crop damage assessment over flooded or inaccessible terrain. Massive coverage, zero human risk.</p>
-          </div>
+        <div class="problem-card stagger-child breathe">
+          <div class="num cyan" data-i18n="prob_num3">1 Server</div>
+          <h3 data-i18n="prob_h3">Single Point of Failure</h3>
+          <p data-i18n="prob_p3">Centralized drone systems depend on one server. One failure grounds the entire fleet. Agriculture can't afford downtime.</p>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- TECH STACK -->
-  <section class="tech" id="tech">
-    <div class="container">
-      <div class="section-label reveal" data-i18n="navStack">Tech Stack</div>
-      <h2 class="section-title reveal reveal-delay-1" data-i18n="techTitle">Engineering without<br><span style="color:var(--green)">compromise.</span></h2>
-      <div class="tech-layout">
-        <div class="tech-layers">
-          <div class="tech-layer reveal">
-            <div class="layer-icon edge">&#9881;</div>
-            <div class="layer-info">
-              <h4>Edge Runtime</h4>
-              <p data-i18n="techEdge">Rust + C++ &mdash; Real-time flight control and sensor fusion</p>
-            </div>
-          </div>
-          <div class="tech-layer reveal reveal-delay-1">
-            <div class="layer-icon ai">&#9733;</div>
-            <div class="layer-info">
-              <h4>Swarm Intelligence</h4>
-              <p data-i18n="techAI">TinyML &mdash; On-device models for route planning and anomaly detection</p>
-            </div>
-          </div>
-          <div class="tech-layer reveal reveal-delay-2">
-            <div class="layer-icon mesh">&#9672;</div>
-            <div class="layer-info">
-              <h4>P2P Mesh Network</h4>
-              <p data-i18n="techMesh">libp2p + MQTT + WebRTC &mdash; Drone-to-drone communication without infrastructure</p>
-            </div>
-          </div>
-          <div class="tech-layer reveal reveal-delay-3">
-            <div class="layer-icon ui">&#9635;</div>
-            <div class="layer-info">
-              <h4>Dashboard</h4>
-              <p data-i18n="techDash">React + Three.js + D3 &mdash; Real-time visualization and mission control</p>
-            </div>
-          </div>
-          <div class="tech-layer reveal">
-            <div class="layer-icon data">&#9636;</div>
-            <div class="layer-info">
-              <h4>Data Pipeline</h4>
-              <p data-i18n="techData">Edge-first with optional sync &mdash; 100% operational offline</p>
-            </div>
-          </div>
+<!-- SOLUTION -->
+<section class="solution" id="solution">
+  <div class="solution-inner">
+    <div class="reveal" style="text-align:center">
+      <span class="caption" style="color:var(--green);display:block;margin-bottom:12px" data-i18n="the_solution">The Solution</span>
+      <h2 class="h2-title" data-i18n="solution_title">Three pillars of<br><span class="gradient-text">autonomous intelligence</span>.</h2>
+    </div>
+    <div class="pillars-grid">
+      <div class="pillar-card stagger-child" data-tilt>
+        <div class="pillar-icon">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="8" width="24" height="16" rx="3" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="16" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="20" cy="16" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M15 16h2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M8 8V5M24 8V5M16 8V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+          </svg>
         </div>
-        <div class="tech-specs reveal">
-          <h3 data-i18n="specsTitle">Specifications</h3>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specLatency">Coordination latency</span>
-            <span class="spec-value">&lt; 50ms</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specDrones">Drones per swarm</span>
-            <span class="spec-value" data-i18n="specDronesVal">Up to 256</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specRange">Mesh range</span>
-            <span class="spec-value" data-i18n="specRangeVal">2km drone-to-drone</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specModel">On-device ML model</span>
-            <span class="spec-value">&lt; 1MB</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specUptime">Uptime without cloud</span>
-            <span class="spec-value">100%</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specCoverage">Coverage per mission</span>
-            <span class="spec-value" data-i18n="specCoverageVal">500+ hectares</span>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label" data-i18n="specProtocol">Protocol</span>
-            <span class="spec-value">Open Source (MIT)</span>
-          </div>
+        <h3 data-i18n="pillar1_title">SwarmOS</h3>
+        <p data-i18n="pillar1_desc">Lightweight operating system running on each drone. Autonomous decision-making with consensus algorithms. Every drone is a leader and a follower.</p>
+      </div>
+      <div class="pillar-card stagger-child" data-tilt>
+        <div class="pillar-icon">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 6v4M16 22v4M6 16h4M22 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+            <path d="M12 12l4 4 4-4M12 20l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
+        <h3 data-i18n="pillar2_title">Edge Intelligence</h3>
+        <p data-i18n="pillar2_desc">On-device ML models for real-time crop analysis. No cloud dependency. Detect pests, measure NDVI, and assess soil health at the edge.</p>
+      </div>
+      <div class="pillar-card stagger-child" data-tilt>
+        <div class="pillar-icon">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="24" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="8" cy="24" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="24" cy="24" r="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="16" cy="16" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M11 8h10M11 24h10M8 11v10M24 11v10M11 11l2 2M19 19l2 2M19 11l2-2M11 21l-2 2" stroke="currentColor" stroke-width="1" opacity=".4"/>
+          </svg>
+        </div>
+        <h3 data-i18n="pillar3_title">Mesh Network</h3>
+        <p data-i18n="pillar3_desc">Drone-to-drone communication via ad-hoc mesh networking. Self-healing topology. If one node goes down, the swarm adapts instantly.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- CTA -->
-  <section class="cta-section" id="cta">
-    <div class="cta-content">
-      <div class="section-label reveal" data-i18n="ctaLabel">Join</div>
-      <h2 class="reveal reveal-delay-1" data-i18n="ctaTitle">The future of<br>agriculture <span style="color:var(--green)">flies in swarms.</span></h2>
-      <p class="reveal reveal-delay-2" data-i18n="ctaSub">
-        We're building the open protocol that democratizes precision agriculture for all of Latin America.
-      </p>
-      <div class="cta-buttons reveal reveal-delay-3">
-        <a href="https://dorahacks.io" class="btn-primary" target="_blank" data-i18n="ctaBtn1">Support on DoraHacks &#8594;</a>
-        <a href="https://github.com/enjambre-swarm" class="btn-secondary" target="_blank" data-i18n="ctaBtn2">Contribute &#8599;</a>
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="how-it-works">
+  <div class="how-inner">
+    <div class="reveal" style="text-align:center">
+      <span class="caption" style="color:var(--green);display:block;margin-bottom:12px" data-i18n="how_cap">How It Works</span>
+      <h2 class="h2-title" data-i18n="how_title">Deploy. Coordinate. <span class="gradient-text">Act.</span></h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card stagger-child">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <path d="M16 4v8M8 8l4 4M24 8l-4 4" stroke="#00d26a" stroke-width="2" stroke-linecap="round"/>
+            <rect x="10" y="14" width="12" height="8" rx="2" stroke="#00d26a" stroke-width="2"/>
+            <path d="M12 22v4M20 22v4" stroke="#00d26a" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="14" cy="18" r="1.5" fill="#00d26a" opacity=".6"/>
+            <circle cx="18" cy="18" r="1.5" fill="#00d26a" opacity=".6"/>
+          </svg>
+        </div>
+        <h3 data-i18n="step1_title">Deploy</h3>
+        <p data-i18n="step1_desc">Define your mission area. The swarm auto-configures formation, assigns sectors, and initiates mesh network bootstrapping.</p>
+      </div>
+      <div class="step-card stagger-child">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="10" stroke="#58a6ff" stroke-width="2"/>
+            <circle cx="10" cy="12" r="2" fill="#58a6ff" opacity=".5"/>
+            <circle cx="22" cy="12" r="2" fill="#58a6ff" opacity=".5"/>
+            <circle cx="16" cy="22" r="2" fill="#58a6ff" opacity=".5"/>
+            <path d="M10 12l6 2M22 12l-6 2M16 14v8" stroke="#58a6ff" stroke-width="1" opacity=".4"/>
+            <circle cx="16" cy="14" r="2" fill="#58a6ff"/>
+          </svg>
+        </div>
+        <h3 data-i18n="step2_title">Coordinate</h3>
+        <p data-i18n="step2_desc">Drones communicate peer-to-peer, sharing telemetry and decisions. Consensus algorithms ensure optimal coverage without collisions.</p>
+      </div>
+      <div class="step-card stagger-child">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <path d="M6 26l4-8 4 4 4-10 4 6 4-8" stroke="#c8a96e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="26" cy="10" r="3" stroke="#c8a96e" stroke-width="1.5"/>
+            <path d="M25 10l1-1 2 2" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 data-i18n="step3_title">Act</h3>
+        <p data-i18n="step3_desc">Real-time analytics trigger precision actions: targeted spraying, irrigation alerts, yield predictions. Data flows directly to your dashboard.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-inner">
-      <div class="footer-left">
-        <strong>Enjambre</strong> &mdash; The Vertex Swarm Challenge 2026
+<!-- BENTO FEATURES -->
+<section class="bento" id="features">
+  <div class="bento-inner">
+    <div class="bento-header reveal">
+      <span class="caption" style="color:var(--green);display:block;margin-bottom:12px" data-i18n="features_cap">Features</span>
+      <h2 class="h2-title" data-i18n="features_title">Built for the field.<br><span class="gradient-text">Engineered for scale.</span></h2>
+    </div>
+    <div class="bento-grid">
+      <!-- 1: Collision Avoidance (span 2) -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--green)">
+        <div class="card-icon ic-green">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 8v6l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="currentColor" opacity=".3"/>
+            <path d="M6 16h4M22 16h4M16 6v4M16 22v4" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f1_title">Collision Avoidance</h3>
+        <p data-i18n="f1_desc">360-degree LiDAR sensing with predictive path modeling. Each drone maintains dynamic safety corridors and re-routes in milliseconds.</p>
+        <div class="mini-preview">
+          <div class="mini-mesh">
+            <div class="mesh-node"></div>
+            <div class="mesh-node"></div>
+            <div class="mesh-node"></div>
+            <div class="mesh-node"></div>
+            <div class="mesh-node"></div>
+          </div>
+        </div>
       </div>
+      <!-- 2: Formation Planning -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--cyan)">
+        <div class="card-icon ic-cyan">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M6 6h20v20H6z" stroke="currentColor" stroke-width="1.5" opacity=".3"/>
+            <circle cx="10" cy="10" r="2" fill="currentColor"/>
+            <circle cx="22" cy="10" r="2" fill="currentColor"/>
+            <circle cx="16" cy="16" r="2" fill="currentColor"/>
+            <circle cx="10" cy="22" r="2" fill="currentColor"/>
+            <circle cx="22" cy="22" r="2" fill="currentColor"/>
+            <path d="M10 10l6 6M22 10l-6 6M10 22l6-6M22 22l-6-6" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f2_title">Formation Planning</h3>
+        <p data-i18n="f2_desc">AI-optimized formations for any terrain. Grid, spiral, edge-follow, or custom patterns that adapt to field geometry.</p>
+      </div>
+      <!-- 3: Telemetry -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--earth)">
+        <div class="card-icon ic-earth">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M4 24l6-8 4 4 6-10 4 6 4-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="28" cy="8" r="2" fill="currentColor" opacity=".5"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f3_title">Live Telemetry</h3>
+        <p data-i18n="f3_desc">Battery, altitude, GPS, wind speed, temperature -- every metric streamed in real-time across the mesh network.</p>
+        <div class="mini-preview">
+          <div class="mini-telem">
+            <div class="mini-telem-bar"></div><div class="mini-telem-bar"></div><div class="mini-telem-bar"></div><div class="mini-telem-bar"></div>
+            <div class="mini-telem-bar"></div><div class="mini-telem-bar"></div><div class="mini-telem-bar"></div><div class="mini-telem-bar"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 4: Task Assignment (span 2) -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--lime)">
+        <div class="card-icon ic-lime">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="4" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="18" y="4" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="4" y="18" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="18" y="18" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M7 9l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 9l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 23h0M23 23h0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f4_title">Smart Task Assignment</h3>
+        <p data-i18n="f4_desc">Workload distribution using auction-based protocols. Each drone bids for tasks based on proximity, battery level, and specialization. Fair, efficient, autonomous.</p>
+      </div>
+      <!-- 5: Weather Integration -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--cyan)">
+        <div class="card-icon ic-cyan">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M8 22a6 6 0 010-12 8 8 0 0116 0 5 5 0 01-1 10H8z" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 26v2M16 26v3M20 26v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f5_title">Weather Integration</h3>
+        <p data-i18n="f5_desc">Real-time wind, rain, and temperature data integrated into flight planning. Auto-abort on dangerous conditions.</p>
+      </div>
+      <!-- 6: Analytics -->
+      <div class="bento-card card stagger-child" data-tilt style="border-left:3px solid var(--earth)">
+        <div class="card-icon ic-earth">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="2"/>
+            <rect x="8" y="16" width="4" height="8" rx="1" fill="currentColor" opacity=".5"/>
+            <rect x="14" y="12" width="4" height="12" rx="1" fill="currentColor" opacity=".7"/>
+            <rect x="20" y="8" width="4" height="16" rx="1" fill="currentColor" opacity=".9"/>
+          </svg>
+        </div>
+        <h3 class="h3-title" data-i18n="f6_title">Advanced Analytics</h3>
+        <p data-i18n="f6_desc">NDVI maps, pest heat maps, yield predictions. Historical data overlays. Export to any farm management platform.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="use-cases" id="use-cases">
+  <div class="use-cases-inner">
+    <div class="reveal" style="text-align:center">
+      <span class="caption" style="color:var(--earth);display:block;margin-bottom:12px" data-i18n="uc_cap">Use Cases</span>
+      <h2 class="h2-title" data-i18n="uc_title">One platform.<br><span class="gradient-text-warm">Infinite applications.</span></h2>
+    </div>
+    <div class="use-cases-grid">
+      <div class="use-case-card stagger-child">
+        <svg class="uc-float" style="top:20px;right:20px;width:80px;height:80px" viewBox="0 0 80 80" fill="none">
+          <path d="M20 60L40 20L60 60" stroke="#00d26a" stroke-width="1.5" opacity=".3"/>
+          <path d="M10 60h60" stroke="#00d26a" stroke-width="1" opacity=".2"/>
+          <circle cx="40" cy="35" r="8" stroke="#00d26a" stroke-width="1" opacity=".2"/>
+        </svg>
+        <div class="uc-icon">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M6 26c2-4 6-16 10-16s8 12 10 16" stroke="#00d26a" stroke-width="2" fill="none"/>
+            <path d="M16 10V4" stroke="#00d26a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 14c-2-2-4-2-6 0M20 14c2-2 4-2 6 0" stroke="#00d26a" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+          </svg>
+        </div>
+        <h3 data-i18n="uc1_title">Precision Agriculture</h3>
+        <p data-i18n="uc1_desc">Crop monitoring, pest detection, targeted spraying, and irrigation optimization across thousands of hectares.</p>
+      </div>
+      <div class="use-case-card stagger-child">
+        <svg class="uc-float" style="top:20px;right:20px;width:80px;height:80px" viewBox="0 0 80 80" fill="none">
+          <rect x="15" y="25" width="50" height="30" rx="4" stroke="#58a6ff" stroke-width="1" opacity=".2"/>
+          <path d="M25 55v10M55 55v10M15 40h50" stroke="#58a6ff" stroke-width="1" opacity=".15"/>
+        </svg>
+        <div class="uc-icon">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect x="6" y="12" width="20" height="12" rx="3" stroke="#58a6ff" stroke-width="2"/>
+            <path d="M10 24v4M22 24v4M6 18h20" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+            <circle cx="16" cy="8" r="3" stroke="#58a6ff" stroke-width="1.5"/>
+            <path d="M16 5v-2" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 data-i18n="uc2_title">Smart Logistics</h3>
+        <p data-i18n="uc2_desc">Last-mile delivery, warehouse inventory scanning, and supply chain monitoring with coordinated drone fleets.</p>
+      </div>
+      <div class="use-case-card stagger-child">
+        <svg class="uc-float" style="top:20px;right:20px;width:80px;height:80px" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="25" stroke="#c8a96e" stroke-width="1" opacity=".15"/>
+          <path d="M30 30l20 20M50 30l-20 20" stroke="#c8a96e" stroke-width="1" opacity=".15"/>
+        </svg>
+        <div class="uc-icon">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="14" r="8" stroke="#c8a96e" stroke-width="2"/>
+            <path d="M16 10v4l3 2" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M8 24l3-3M24 24l-3-3" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+            <path d="M12 28h8" stroke="#c8a96e" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 data-i18n="uc3_title">Search &amp; Rescue</h3>
+        <p data-i18n="uc3_desc">Rapid deployment over disaster zones. Thermal imaging, survivor detection, and coordinated area coverage in minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo" id="demo">
+  <div class="demo-inner">
+    <div class="reveal">
+      <span class="caption" style="color:var(--green);display:block;margin-bottom:12px" data-i18n="demo_cap">Interactive Demo</span>
+      <h2 class="h2-title" data-i18n="demo_title">Watch the swarm <span class="gradient-text">adapt</span>.</h2>
+      <p class="body-text" style="margin-top:12px" data-i18n="demo_desc">Click a formation to see drones coordinate in real-time. No central controller -- pure peer-to-peer intelligence.</p>
+    </div>
+    <div class="demo-canvas-wrap">
+      <canvas id="demoCanvas" width="800" height="400"></canvas>
+    </div>
+    <div class="demo-controls">
+      <button class="demo-btn active" data-formation="grid" data-i18n="form_grid">Grid</button>
+      <button class="demo-btn" data-formation="circle" data-i18n="form_circle">Circle</button>
+      <button class="demo-btn" data-formation="vform" data-i18n="form_v">V-Formation</button>
+      <button class="demo-btn" data-formation="spiral" data-i18n="form_spiral">Spiral</button>
+      <button class="demo-btn" data-formation="scatter" data-i18n="form_scatter">Scatter</button>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats" id="stats">
+  <div class="stats-inner">
+    <div class="stat-item reveal"><div class="stat-num" data-target="47" data-prefix="" data-suffix=" min">0</div><div class="stat-label" data-i18n="stat1">Avg Flight Time</div></div>
+    <div class="stat-item reveal"><div class="stat-num" data-target="1000" data-prefix="" data-suffix="+">0</div><div class="stat-label" data-i18n="stat2">Hectares/Mission</div></div>
+    <div class="stat-item reveal"><div class="stat-num" data-target="99" data-prefix="" data-suffix="ms">0</div><div class="stat-label" data-i18n="stat3">Coordination Latency</div></div>
+    <div class="stat-item reveal"><div class="stat-num" data-target="0" data-prefix="" data-suffix="">0</div><div class="stat-label" data-i18n="stat4">Central Servers</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="cta">
+  <div class="cta-inner reveal">
+    <span class="caption" style="color:var(--green);display:block;margin-bottom:16px" data-i18n="cta_cap">Ready to Deploy?</span>
+    <h2 data-i18n="cta_title">Start <span class="gradient-text">coordinating</span><br>your swarm today.</h2>
+    <p class="body-text" data-i18n="cta_desc">Join the future of autonomous agriculture. Deploy your first mission in minutes.</p>
+    <a href="app.html" class="btn-primary magnetic" style="display:inline-flex;margin-top:8px" data-i18n="cta_btn">Start Coordinating <span class="arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a href="#" class="footer-logo">
+        <svg viewBox="0 0 170 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="5" width="12" height="18" rx="1.5" fill="none" stroke="#fff" stroke-width="2"/>
+          <line x1="1" y1="14" x2="10" y2="14" stroke="#fff" stroke-width="2"/>
+          <path d="M18 23V5l9 18V5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M27 14Q30 8 33 14Q36 20 39 14" stroke="#00d26a" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+          <path d="M41 5v13c0 3-2 5-4 5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M48 23L54 5l6 18M50 17h8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M64 23V5l6 12 6-12v18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M82 5v18M82 5h6c3 0 4 2 4 4s-1 4-4 4h-6m4 0l5 10" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M98 5h10M98 5v18h10M98 14h7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
       <div class="footer-links">
-        <a href="https://github.com/enjambre-swarm" target="_blank">GitHub</a>
-        <a href="https://dorahacks.io" target="_blank">DoraHacks</a>
-        <a href="#">Docs</a>
-        <a href="#">Twitter</a>
+        <a href="#" data-i18n="footer_docs">Docs</a>
+        <a href="#" data-i18n="footer_api">API</a>
+        <a href="#" data-i18n="footer_contact">Contact</a>
       </div>
     </div>
-  </footer>
+    <div class="footer-badge"><span class="chain-dot"></span><span data-i18n="footer_status">Mesh Network Active</span></div>
+  </div>
+</footer>
 
-  <script>
-    // ── HAMBURGER ──
-    document.getElementById('hamburger').addEventListener('click', () => {
-      document.getElementById('navLinks').classList.toggle('open');
-    });
+<script>
+/* ═══ i18n ═══ */
+const translations={
+  en:{
+    nav_problem:'Problem',nav_solution:'Solution',nav_features:'Features',nav_use_cases:'Use Cases',nav_demo:'Demo',nav_app:'Dashboard',
+    start_coordinating:'Start Coordinating',hero_tag:'Decentralized Drone Swarm',
+    hero_w1:'Coordinate. ',hero_w2:'Cultivate. ',hero_w3:'Conquer.',
+    hero_sub:'The first fully decentralized drone swarm coordination platform. No central server. No single point of failure. Just pure, autonomous agricultural intelligence.',
+    start_coordinating_btn:'Start Coordinating',watch_demo:'Watch Demo',
+    m1:'47 min avg flight time',m2:'1000+ hectares per mission',m3:'Sub-100ms coordination',m4:'Zero central server',m5:'99.97% uptime',
+    the_problem:'The Problem',problem_title:'$65 billion lost annually.',problem_desc:'Agricultural inefficiency costs the world $65B every year. Manual processes, uncoordinated operations, and centralized systems create massive blind spots across farmland.',
+    prob_num1:'40%',prob_h1:'Crop Waste',prob_p1:'Up to 40% of crops are lost due to late pest detection, poor irrigation timing, and lack of real-time field intelligence.',
+    prob_num2:'72h',prob_h2:'Response Delay',prob_p2:'Traditional monitoring takes up to 72 hours to detect and respond to field anomalies. By then, the damage is done.',
+    prob_num3:'1 Server',prob_h3:'Single Point of Failure',prob_p3:'Centralized drone systems depend on one server. One failure grounds the entire fleet. Agriculture can\'t afford downtime.',
+    the_solution:'The Solution',solution_title:'Three pillars of autonomous intelligence.',
+    pillar1_title:'SwarmOS',pillar1_desc:'Lightweight operating system running on each drone. Autonomous decision-making with consensus algorithms. Every drone is a leader and a follower.',
+    pillar2_title:'Edge Intelligence',pillar2_desc:'On-device ML models for real-time crop analysis. No cloud dependency. Detect pests, measure NDVI, and assess soil health at the edge.',
+    pillar3_title:'Mesh Network',pillar3_desc:'Drone-to-drone communication via ad-hoc mesh networking. Self-healing topology. If one node goes down, the swarm adapts instantly.',
+    how_cap:'How It Works',how_title:'Deploy. Coordinate. Act.',
+    step1_title:'Deploy',step1_desc:'Define your mission area. The swarm auto-configures formation, assigns sectors, and initiates mesh network bootstrapping.',
+    step2_title:'Coordinate',step2_desc:'Drones communicate peer-to-peer, sharing telemetry and decisions. Consensus algorithms ensure optimal coverage without collisions.',
+    step3_title:'Act',step3_desc:'Real-time analytics trigger precision actions: targeted spraying, irrigation alerts, yield predictions. Data flows directly to your dashboard.',
+    features_cap:'Features',features_title:'Built for the field. Engineered for scale.',
+    f1_title:'Collision Avoidance',f1_desc:'360-degree LiDAR sensing with predictive path modeling. Each drone maintains dynamic safety corridors and re-routes in milliseconds.',
+    f2_title:'Formation Planning',f2_desc:'AI-optimized formations for any terrain. Grid, spiral, edge-follow, or custom patterns that adapt to field geometry.',
+    f3_title:'Live Telemetry',f3_desc:'Battery, altitude, GPS, wind speed, temperature -- every metric streamed in real-time across the mesh network.',
+    f4_title:'Smart Task Assignment',f4_desc:'Workload distribution using auction-based protocols. Each drone bids for tasks based on proximity, battery level, and specialization.',
+    f5_title:'Weather Integration',f5_desc:'Real-time wind, rain, and temperature data integrated into flight planning. Auto-abort on dangerous conditions.',
+    f6_title:'Advanced Analytics',f6_desc:'NDVI maps, pest heat maps, yield predictions. Historical data overlays. Export to any farm management platform.',
+    uc_cap:'Use Cases',uc_title:'One platform. Infinite applications.',
+    uc1_title:'Precision Agriculture',uc1_desc:'Crop monitoring, pest detection, targeted spraying, and irrigation optimization across thousands of hectares.',
+    uc2_title:'Smart Logistics',uc2_desc:'Last-mile delivery, warehouse inventory scanning, and supply chain monitoring with coordinated drone fleets.',
+    uc3_title:'Search & Rescue',uc3_desc:'Rapid deployment over disaster zones. Thermal imaging, survivor detection, and coordinated area coverage in minutes.',
+    demo_cap:'Interactive Demo',demo_title:'Watch the swarm adapt.',demo_desc:'Click a formation to see drones coordinate in real-time. No central controller -- pure peer-to-peer intelligence.',
+    form_grid:'Grid',form_circle:'Circle',form_v:'V-Formation',form_spiral:'Spiral',form_scatter:'Scatter',
+    stat1:'Avg Flight Time',stat2:'Hectares/Mission',stat3:'Coordination Latency',stat4:'Central Servers',
+    cta_cap:'Ready to Deploy?',cta_title:'Start coordinating your swarm today.',cta_desc:'Join the future of autonomous agriculture. Deploy your first mission in minutes.',cta_btn:'Start Coordinating',
+    footer_docs:'Docs',footer_api:'API',footer_contact:'Contact',footer_status:'Mesh Network Active'
+  },
+  es:{
+    nav_problem:'Problema',nav_solution:'Soluci\u00f3n',nav_features:'Caracter\u00edsticas',nav_use_cases:'Casos de Uso',nav_demo:'Demo',nav_app:'Panel',
+    start_coordinating:'Comenzar',hero_tag:'Enjambre de Drones Descentralizado',
+    hero_w1:'Coordinar. ',hero_w2:'Cultivar. ',hero_w3:'Conquistar.',
+    hero_sub:'La primera plataforma de coordinaci\u00f3n de enjambres de drones totalmente descentralizada. Sin servidor central. Sin punto \u00fanico de fallo. Inteligencia agr\u00edcola aut\u00f3noma pura.',
+    start_coordinating_btn:'Comenzar a Coordinar',watch_demo:'Ver Demo',
+    m1:'47 min tiempo promedio de vuelo',m2:'1000+ hect\u00e1reas por misi\u00f3n',m3:'Coordinaci\u00f3n sub-100ms',m4:'Cero servidores centrales',m5:'99.97% disponibilidad',
+    the_problem:'El Problema',problem_title:'$65 mil millones perdidos anualmente.',problem_desc:'La ineficiencia agr\u00edcola le cuesta al mundo $65B cada a\u00f1o. Procesos manuales, operaciones descoordinadas y sistemas centralizados crean puntos ciegos masivos.',
+    prob_num1:'40%',prob_h1:'Desperdicio de Cultivos',prob_p1:'Hasta el 40% de los cultivos se pierden por detecci\u00f3n tard\u00eda de plagas, mal riego y falta de inteligencia en tiempo real.',
+    prob_num2:'72h',prob_h2:'Retraso en Respuesta',prob_p2:'El monitoreo tradicional tarda hasta 72 horas en detectar y responder a anomal\u00edas. Para entonces, el da\u00f1o ya est\u00e1 hecho.',
+    prob_num3:'1 Servidor',prob_h3:'Punto \u00danico de Fallo',prob_p3:'Los sistemas centralizados dependen de un servidor. Un fallo inmoviliza toda la flota. La agricultura no puede permitirse tiempo de inactividad.',
+    the_solution:'La Soluci\u00f3n',solution_title:'Tres pilares de inteligencia aut\u00f3noma.',
+    pillar1_title:'SwarmOS',pillar1_desc:'Sistema operativo ligero en cada dron. Toma de decisiones aut\u00f3noma con algoritmos de consenso. Cada dron es l\u00edder y seguidor.',
+    pillar2_title:'Inteligencia Edge',pillar2_desc:'Modelos ML en dispositivo para an\u00e1lisis de cultivos en tiempo real. Sin dependencia de la nube. Detecta plagas, mide NDVI y eval\u00faa la salud del suelo.',
+    pillar3_title:'Red Mesh',pillar3_desc:'Comunicaci\u00f3n dron a dron v\u00eda red mesh ad-hoc. Topolog\u00eda auto-reparable. Si un nodo cae, el enjambre se adapta instant\u00e1neamente.',
+    how_cap:'C\u00f3mo Funciona',how_title:'Desplegar. Coordinar. Actuar.',
+    step1_title:'Desplegar',step1_desc:'Define tu \u00e1rea de misi\u00f3n. El enjambre auto-configura formaci\u00f3n, asigna sectores e inicia el arranque de la red mesh.',
+    step2_title:'Coordinar',step2_desc:'Los drones se comunican peer-to-peer, compartiendo telemetr\u00eda y decisiones. Algoritmos de consenso aseguran cobertura \u00f3ptima.',
+    step3_title:'Actuar',step3_desc:'An\u00e1lisis en tiempo real activan acciones de precisi\u00f3n: fumigaci\u00f3n dirigida, alertas de riego, predicciones de rendimiento.',
+    features_cap:'Caracter\u00edsticas',features_title:'Construido para el campo. Dise\u00f1ado para escalar.',
+    f1_title:'Evasi\u00f3n de Colisiones',f1_desc:'Sensado LiDAR 360\u00b0 con modelado predictivo de trayectoria. Cada dron mantiene corredores de seguridad din\u00e1micos.',
+    f2_title:'Planificaci\u00f3n de Formaci\u00f3n',f2_desc:'Formaciones optimizadas por IA para cualquier terreno. Cuadr\u00edcula, espiral, seguimiento de bordes o patrones personalizados.',
+    f3_title:'Telemetr\u00eda en Vivo',f3_desc:'Bater\u00eda, altitud, GPS, velocidad del viento, temperatura -- cada m\u00e9trica transmitida en tiempo real.',
+    f4_title:'Asignaci\u00f3n Inteligente',f4_desc:'Distribuci\u00f3n de carga usando protocolos de subasta. Cada dron puja por tareas seg\u00fan proximidad, bater\u00eda y especializaci\u00f3n.',
+    f5_title:'Integraci\u00f3n Clim\u00e1tica',f5_desc:'Datos de viento, lluvia y temperatura en tiempo real integrados en la planificaci\u00f3n de vuelo.',
+    f6_title:'An\u00e1lisis Avanzado',f6_desc:'Mapas NDVI, mapas de calor de plagas, predicciones de rendimiento. Superposici\u00f3n de datos hist\u00f3ricos.',
+    uc_cap:'Casos de Uso',uc_title:'Una plataforma. Aplicaciones infinitas.',
+    uc1_title:'Agricultura de Precisi\u00f3n',uc1_desc:'Monitoreo de cultivos, detecci\u00f3n de plagas, fumigaci\u00f3n dirigida y optimizaci\u00f3n de riego.',
+    uc2_title:'Log\u00edstica Inteligente',uc2_desc:'Entrega de \u00faltima milla, escaneo de inventario y monitoreo de cadena de suministro con flotas coordinadas.',
+    uc3_title:'B\u00fasqueda y Rescate',uc3_desc:'Despliegue r\u00e1pido sobre zonas de desastre. Imagen t\u00e9rmica, detecci\u00f3n de sobrevivientes y cobertura coordinada.',
+    demo_cap:'Demo Interactiva',demo_title:'Mira c\u00f3mo el enjambre se adapta.',demo_desc:'Haz clic en una formaci\u00f3n para ver los drones coordinarse en tiempo real.',
+    form_grid:'Cuadr\u00edcula',form_circle:'C\u00edrculo',form_v:'V-Formaci\u00f3n',form_spiral:'Espiral',form_scatter:'Dispersi\u00f3n',
+    stat1:'Tiempo de Vuelo Prom.',stat2:'Hect\u00e1reas/Misi\u00f3n',stat3:'Latencia de Coord.',stat4:'Servidores Centrales',
+    cta_cap:'\u00bfListo para Desplegar?',cta_title:'Comienza a coordinar tu enjambre hoy.',cta_desc:'\u00danete al futuro de la agricultura aut\u00f3noma. Despliega tu primera misi\u00f3n en minutos.',cta_btn:'Comenzar a Coordinar',
+    footer_docs:'Docs',footer_api:'API',footer_contact:'Contacto',footer_status:'Red Mesh Activa'
+  },
+  zh:{
+    nav_problem:'\u95ee\u9898',nav_solution:'\u89e3\u51b3\u65b9\u6848',nav_features:'\u529f\u80fd',nav_use_cases:'\u5e94\u7528\u573a\u666f',nav_demo:'\u6f14\u793a',nav_app:'\u63a7\u5236\u53f0',
+    start_coordinating:'\u5f00\u59cb\u534f\u8c03',hero_tag:'\u53bb\u4e2d\u5fc3\u5316\u65e0\u4eba\u673a\u96c6\u7fa4',
+    hero_w1:'\u534f\u8c03\u3002',hero_w2:'\u57f9\u80b2\u3002',hero_w3:'\u5f81\u670d\u3002',
+    hero_sub:'\u7b2c\u4e00\u4e2a\u5b8c\u5168\u53bb\u4e2d\u5fc3\u5316\u7684\u65e0\u4eba\u673a\u96c6\u7fa4\u534f\u8c03\u5e73\u53f0\u3002\u65e0\u4e2d\u5fc3\u670d\u52a1\u5668\u3002\u65e0\u5355\u70b9\u6545\u969c\u3002\u7eaf\u7cb9\u7684\u81ea\u4e3b\u519c\u4e1a\u667a\u80fd\u3002',
+    start_coordinating_btn:'\u5f00\u59cb\u534f\u8c03',watch_demo:'\u89c2\u770b\u6f14\u793a',
+    m1:'47\u5206\u949f\u5e73\u5747\u98de\u884c\u65f6\u95f4',m2:'1000+\u516c\u9877/\u4efb\u52a1',m3:'\u4e8e100ms\u534f\u8c03',m4:'\u96f6\u4e2d\u5fc3\u670d\u52a1\u5668',m5:'99.97%\u6b63\u5e38\u8fd0\u884c',
+    the_problem:'\u95ee\u9898',problem_title:'\u6bcf\u5e74\u635f\u5931650\u4ebf\u7f8e\u5143\u3002',problem_desc:'\u519c\u4e1a\u4f4e\u6548\u6bcf\u5e74\u7ed9\u4e16\u754c\u9020\u6210650\u4ebf\u7f8e\u5143\u7684\u635f\u5931\u3002\u624b\u52a8\u6d41\u7a0b\u3001\u4e0d\u534f\u8c03\u7684\u64cd\u4f5c\u548c\u4e2d\u5fc3\u5316\u7cfb\u7edf\u5728\u519c\u7530\u4e2d\u5236\u9020\u5de8\u5927\u76f2\u70b9\u3002',
+    prob_num1:'40%',prob_h1:'\u4f5c\u7269\u6d6a\u8d39',prob_p1:'\u7531\u4e8e\u75c5\u866b\u5bb3\u68c0\u6d4b\u5ef6\u8fdf\u3001\u704c\u6e89\u65f6\u673a\u4e0d\u5f53\u53ca\u7f3a\u4e4f\u5b9e\u65f6\u4fe1\u606f\uff0c\u9ad8\u8fbe40%\u7684\u4f5c\u7269\u88ab\u6d6a\u8d39\u3002',
+    prob_num2:'72\u5c0f\u65f6',prob_h2:'\u54cd\u5e94\u5ef6\u8fdf',prob_p2:'\u4f20\u7edf\u76d1\u6d4b\u9700\u898172\u5c0f\u65f6\u624d\u80fd\u68c0\u6d4b\u5e76\u54cd\u5e94\u5f02\u5e38\u3002\u5230\u90a3\u65f6\u635f\u5bb3\u5df2\u7ecf\u9020\u6210\u3002',
+    prob_num3:'1\u53f0\u670d\u52a1\u5668',prob_h3:'\u5355\u70b9\u6545\u969c',prob_p3:'\u4e2d\u5fc3\u5316\u65e0\u4eba\u673a\u7cfb\u7edf\u4f9d\u8d56\u4e00\u53f0\u670d\u52a1\u5668\u3002\u4e00\u6b21\u6545\u969c\u5c31\u4f1a\u4f7f\u6574\u4e2a\u673a\u961f\u505c\u98de\u3002',
+    the_solution:'\u89e3\u51b3\u65b9\u6848',solution_title:'\u81ea\u4e3b\u667a\u80fd\u7684\u4e09\u5927\u652f\u67f1\u3002',
+    pillar1_title:'SwarmOS',pillar1_desc:'\u6bcf\u67b6\u65e0\u4eba\u673a\u4e0a\u8fd0\u884c\u7684\u8f7b\u91cf\u7ea7\u64cd\u4f5c\u7cfb\u7edf\u3002\u5229\u7528\u5171\u8bc6\u7b97\u6cd5\u8fdb\u884c\u81ea\u4e3b\u51b3\u7b56\u3002',
+    pillar2_title:'\u8fb9\u7f18\u667a\u80fd',pillar2_desc:'\u8bbe\u5907\u7aef ML \u6a21\u578b\u7528\u4e8e\u5b9e\u65f6\u4f5c\u7269\u5206\u6790\u3002\u65e0\u4e91\u4f9d\u8d56\u3002\u68c0\u6d4b\u75c5\u866b\u5bb3\u3001\u6d4b\u91cf NDVI\u3002',
+    pillar3_title:'\u7f51\u683c\u7f51\u7edc',pillar3_desc:'\u901a\u8fc7\u81ea\u7ec4\u7ec7\u7f51\u683c\u7f51\u7edc\u8fdb\u884c\u65e0\u4eba\u673a\u95f4\u901a\u4fe1\u3002\u81ea\u6108\u62d3\u6251\u3002\u4e00\u4e2a\u8282\u70b9\u6389\u7ebf\uff0c\u96c6\u7fa4\u7acb\u5373\u9002\u5e94\u3002',
+    how_cap:'\u5de5\u4f5c\u539f\u7406',how_title:'\u90e8\u7f72\u3002\u534f\u8c03\u3002\u884c\u52a8\u3002',
+    step1_title:'\u90e8\u7f72',step1_desc:'\u5b9a\u4e49\u4efb\u52a1\u533a\u57df\u3002\u96c6\u7fa4\u81ea\u52a8\u914d\u7f6e\u7f16\u961f\u3001\u5206\u914d\u6247\u533a\u5e76\u542f\u52a8\u7f51\u683c\u7f51\u7edc\u3002',
+    step2_title:'\u534f\u8c03',step2_desc:'\u65e0\u4eba\u673a\u70b9\u5bf9\u70b9\u901a\u4fe1\uff0c\u5171\u4eab\u9065\u6d4b\u548c\u51b3\u7b56\u3002\u5171\u8bc6\u7b97\u6cd5\u786e\u4fdd\u6700\u4f18\u8986\u76d6\u3002',
+    step3_title:'\u884c\u52a8',step3_desc:'\u5b9e\u65f6\u5206\u6790\u89e6\u53d1\u7cbe\u51c6\u884c\u52a8\uff1a\u5b9a\u5411\u55b7\u6d12\u3001\u704c\u6e89\u8b66\u62a5\u3001\u4ea7\u91cf\u9884\u6d4b\u3002',
+    features_cap:'\u529f\u80fd',features_title:'\u4e3a\u7530\u95f4\u800c\u5efa\u3002\u4e3a\u89c4\u6a21\u800c\u8bbe\u8ba1\u3002',
+    f1_title:'\u78b0\u649e\u89c4\u907f',f1_desc:'360\u00b0 LiDAR \u611f\u5e94\u4e0e\u9884\u6d4b\u8def\u5f84\u5efa\u6a21\u3002\u6bcf\u67b6\u65e0\u4eba\u673a\u7ef4\u6301\u52a8\u6001\u5b89\u5168\u901a\u9053\u3002',
+    f2_title:'\u7f16\u961f\u89c4\u5212',f2_desc:'AI \u4f18\u5316\u7684\u7f16\u961f\u9002\u5e94\u4efb\u4f55\u5730\u5f62\u3002\u7f51\u683c\u3001\u87ba\u65cb\u3001\u8fb9\u7f18\u8ddf\u968f\u6216\u81ea\u5b9a\u4e49\u6a21\u5f0f\u3002',
+    f3_title:'\u5b9e\u65f6\u9065\u6d4b',f3_desc:'\u7535\u6c60\u3001\u6d77\u62d4\u3001GPS\u3001\u98ce\u901f\u3001\u6e29\u5ea6 -- \u6bcf\u4e2a\u6307\u6807\u901a\u8fc7\u7f51\u683c\u7f51\u7edc\u5b9e\u65f6\u4f20\u8f93\u3002',
+    f4_title:'\u667a\u80fd\u4efb\u52a1\u5206\u914d',f4_desc:'\u4f7f\u7528\u62cd\u5356\u534f\u8bae\u8fdb\u884c\u5de5\u4f5c\u8d1f\u8f7d\u5206\u914d\u3002\u6bcf\u67b6\u65e0\u4eba\u673a\u6839\u636e\u8fd1\u8ddd\u3001\u7535\u91cf\u548c\u4e13\u4e1a\u5316\u8fdb\u884c\u7ade\u6807\u3002',
+    f5_title:'\u5929\u6c14\u96c6\u6210',f5_desc:'\u5b9e\u65f6\u98ce\u3001\u96e8\u3001\u6e29\u5ea6\u6570\u636e\u96c6\u6210\u5230\u98de\u884c\u89c4\u5212\u4e2d\u3002\u5371\u9669\u6761\u4ef6\u4e0b\u81ea\u52a8\u4e2d\u6b62\u3002',
+    f6_title:'\u9ad8\u7ea7\u5206\u6790',f6_desc:'NDVI \u5730\u56fe\u3001\u75c5\u866b\u5bb3\u70ed\u529b\u56fe\u3001\u4ea7\u91cf\u9884\u6d4b\u3002\u5386\u53f2\u6570\u636e\u53e0\u52a0\u3002\u5bfc\u51fa\u5230\u4efb\u4f55\u519c\u573a\u7ba1\u7406\u5e73\u53f0\u3002',
+    uc_cap:'\u5e94\u7528\u573a\u666f',uc_title:'\u4e00\u4e2a\u5e73\u53f0\u3002\u65e0\u9650\u5e94\u7528\u3002',
+    uc1_title:'\u7cbe\u51c6\u519c\u4e1a',uc1_desc:'\u4f5c\u7269\u76d1\u6d4b\u3001\u75c5\u866b\u5bb3\u68c0\u6d4b\u3001\u5b9a\u5411\u55b7\u6d12\u548c\u704c\u6e89\u4f18\u5316\u3002',
+    uc2_title:'\u667a\u80fd\u7269\u6d41',uc2_desc:'\u6700\u540e\u4e00\u516c\u91cc\u914d\u9001\u3001\u4ed3\u5e93\u76d8\u70b9\u548c\u4f9b\u5e94\u94fe\u76d1\u63a7\u3002',
+    uc3_title:'\u641c\u7d22\u4e0e\u6551\u63f4',uc3_desc:'\u5feb\u901f\u90e8\u7f72\u5230\u707e\u533a\u3002\u7ea2\u5916\u6210\u50cf\u3001\u5e78\u5b58\u8005\u68c0\u6d4b\u548c\u534f\u8c03\u533a\u57df\u8986\u76d6\u3002',
+    demo_cap:'\u4ea4\u4e92\u6f14\u793a',demo_title:'\u89c2\u770b\u96c6\u7fa4\u9002\u5e94\u3002',demo_desc:'\u70b9\u51fb\u7f16\u961f\u67e5\u770b\u65e0\u4eba\u673a\u5b9e\u65f6\u534f\u8c03\u3002\u65e0\u4e2d\u5fc3\u63a7\u5236\u5668 -- \u7eaf\u70b9\u5bf9\u70b9\u667a\u80fd\u3002',
+    form_grid:'\u7f51\u683c',form_circle:'\u5706\u5f62',form_v:'V\u5f62\u7f16\u961f',form_spiral:'\u87ba\u65cb',form_scatter:'\u5206\u6563',
+    stat1:'\u5e73\u5747\u98de\u884c\u65f6\u95f4',stat2:'\u516c\u9877/\u4efb\u52a1',stat3:'\u534f\u8c03\u5ef6\u8fdf',stat4:'\u4e2d\u5fc3\u670d\u52a1\u5668',
+    cta_cap:'\u51c6\u5907\u90e8\u7f72\uff1f',cta_title:'\u4eca\u5929\u5f00\u59cb\u534f\u8c03\u4f60\u7684\u96c6\u7fa4\u3002',cta_desc:'\u52a0\u5165\u81ea\u4e3b\u519c\u4e1a\u7684\u672a\u6765\u3002\u51e0\u5206\u949f\u5185\u90e8\u7f72\u4f60\u7684\u7b2c\u4e00\u6b21\u4efb\u52a1\u3002',cta_btn:'\u5f00\u59cb\u534f\u8c03',
+    footer_docs:'\u6587\u6863',footer_api:'API',footer_contact:'\u8054\u7cfb',footer_status:'\u7f51\u683c\u7f51\u7edc\u5df2\u6fc0\u6d3b'
+  }
+};
 
-    // ── SCROLL REVEAL ──
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-    // ── FIELD GRID ──
-    const fieldGrid = document.getElementById('fieldGrid');
-    if (fieldGrid) {
-      for (let i = 0; i < 64; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'field-cell';
-        const hue = Math.random() > 0.3
-          ? `hsl(${130 + Math.random() * 30}, ${50 + Math.random() * 30}%, ${15 + Math.random() * 25}%)`
-          : `hsl(${35 + Math.random() * 15}, ${40 + Math.random() * 20}%, ${20 + Math.random() * 15}%)`;
-        cell.style.background = hue;
-        cell.style.animationDelay = `${Math.random() * 4}s`;
-        fieldGrid.appendChild(cell);
-      }
+let currentLang='en';
+function toggleLangDropdown(){document.getElementById('lang-dropdown').classList.toggle('open')}
+function setLang(lang){
+  currentLang=lang;
+  document.querySelectorAll('.lang-option').forEach(o=>{o.classList.toggle('active',o.dataset.lang===lang)});
+  const names={en:'English',es:'Espa\u00f1ol',zh:'\u4e2d\u6587'};
+  document.getElementById('lang-current').textContent=names[lang];
+  document.getElementById('lang-dropdown').classList.remove('open');
+  document.documentElement.lang=lang;
+  const t=translations[lang];if(!t)return;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.dataset.i18n;
+    if(t[key]){
+      if(el.tagName==='INPUT')el.placeholder=t[key];
+      else el.innerHTML=t[key];
     }
-
-    // ── HERO SWARM CANVAS ──
-    (function heroSwarm() {
-      const canvas = document.getElementById('swarm-canvas');
-      const ctx = canvas.getContext('2d');
-      let width, height, particles, mouse;
-
-      function resize() {
-        width = canvas.width = canvas.offsetWidth;
-        height = canvas.height = canvas.offsetHeight;
-      }
-
-      mouse = { x: width / 2, y: height / 2 };
-
-      window.addEventListener('resize', resize);
-      canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = e.clientX - rect.left;
-        mouse.y = e.clientY - rect.top;
-      });
-
-      class Particle {
-        constructor() {
-          this.reset();
+  });
+  // Re-render hero headline for new language
+  if(translations[lang]){
+    const headline=document.getElementById('heroHeadline');
+    const words=headline.querySelectorAll('.word');
+    words.forEach(w=>{
+      const key=w.dataset.i18nWord;
+      if(key&&t[key]){
+        const text=t[key];
+        const cls=Array.from(w.classList).filter(c=>c!=='word').join(' ');
+        w.textContent='';
+        w.setAttribute('aria-label',text);
+        for(let i=0;i<text.length;i++){
+          const span=document.createElement('span');
+          span.className='char';
+          if(cls)cls.split(' ').forEach(c=>c&&span.classList.add(c));
+          span.textContent=text[i]===' '?'\u00A0':text[i];
+          span.style.opacity='1';span.style.transform='none';
+          w.appendChild(span);
         }
-        reset() {
-          this.x = Math.random() * width;
-          this.y = Math.random() * height;
-          this.vx = (Math.random() - 0.5) * 0.8;
-          this.vy = (Math.random() - 0.5) * 0.8;
-          this.size = 1.5 + Math.random() * 2;
-          this.alpha = 0.2 + Math.random() * 0.5;
-          this.isGreen = Math.random() > 0.4;
-        }
-        update() {
-          // Slight attraction to center swarm point
-          const cx = width / 2 + Math.sin(Date.now() * 0.0003) * 200;
-          const cy = height / 2 + Math.cos(Date.now() * 0.0004) * 100;
-          const dx = cx - this.x;
-          const dy = cy - this.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist > 1) {
-            this.vx += (dx / dist) * 0.02;
-            this.vy += (dy / dist) * 0.02;
-          }
-
-          // Mouse repulsion
-          const mdx = this.x - mouse.x;
-          const mdy = this.y - mouse.y;
-          const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-          if (mDist < 150 && mDist > 0) {
-            this.vx += (mdx / mDist) * 0.5;
-            this.vy += (mdy / mDist) * 0.5;
-          }
-
-          // Damping
-          this.vx *= 0.98;
-          this.vy *= 0.98;
-
-          this.x += this.vx;
-          this.y += this.vy;
-
-          if (this.x < 0 || this.x > width) this.vx *= -1;
-          if (this.y < 0 || this.y > height) this.vy *= -1;
-        }
-        draw() {
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-          const color = this.isGreen ? `rgba(0,210,106,${this.alpha})` : `rgba(200,169,110,${this.alpha * 0.6})`;
-          ctx.fillStyle = color;
-          ctx.fill();
-        }
-      }
-
-      function init() {
-        resize();
-        const count = Math.min(Math.floor((width * height) / 6000), 200);
-        particles = [];
-        for (let i = 0; i < count; i++) {
-          particles.push(new Particle());
-        }
-      }
-
-      function drawConnections() {
-        for (let i = 0; i < particles.length; i++) {
-          for (let j = i + 1; j < particles.length; j++) {
-            const dx = particles[i].x - particles[j].x;
-            const dy = particles[i].y - particles[j].y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 100) {
-              ctx.beginPath();
-              ctx.moveTo(particles[i].x, particles[i].y);
-              ctx.lineTo(particles[j].x, particles[j].y);
-              const alpha = (1 - dist / 100) * 0.15;
-              ctx.strokeStyle = `rgba(0,210,106,${alpha})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          }
-        }
-      }
-
-      function animate() {
-        ctx.clearRect(0, 0, width, height);
-        particles.forEach(p => { p.update(); p.draw(); });
-        drawConnections();
-        requestAnimationFrame(animate);
-      }
-
-      init();
-      animate();
-    })();
-
-    // ── SWARM DEMO CANVAS ──
-    (function swarmDemo() {
-      const canvas = document.getElementById('swarm-demo');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      let w, h;
-
-      function resize() {
-        const rect = canvas.parentElement ? canvas : canvas;
-        w = canvas.width = canvas.offsetWidth;
-        h = canvas.height = canvas.offsetHeight;
-      }
-
-      resize();
-      window.addEventListener('resize', resize);
-
-      const drones = [];
-      const DRONE_COUNT = 24;
-      const FIELD_ROWS = 4;
-      const FIELD_COLS = 6;
-
-      // Assign drones to grid zones
-      for (let i = 0; i < DRONE_COUNT; i++) {
-        const zoneCol = i % FIELD_COLS;
-        const zoneRow = Math.floor(i / FIELD_COLS) % FIELD_ROWS;
-        drones.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          targetX: 0,
-          targetY: 0,
-          zone: { row: zoneRow, col: zoneCol },
-          speed: 1.5 + Math.random() * 1,
-          phase: Math.random() * Math.PI * 2,
-          scanning: Math.random() > 0.5,
-          trail: []
-        });
-      }
-
-      let mode = 'scatter';
-      let modeTimer = 0;
-      const modes = ['scatter', 'grid', 'sweep', 'converge', 'grid'];
-      let modeIndex = 0;
-
-      function updateTargets() {
-        modeTimer++;
-        if (modeTimer > 300) {
-          modeTimer = 0;
-          modeIndex = (modeIndex + 1) % modes.length;
-          mode = modes[modeIndex];
-        }
-
-        const margin = 60;
-        const usableW = w - margin * 2;
-        const usableH = h - margin * 2;
-
-        drones.forEach((d, i) => {
-          const t = Date.now() * 0.001;
-
-          if (mode === 'scatter') {
-            d.targetX = margin + (d.zone.col + 0.5) / FIELD_COLS * usableW + Math.sin(t + d.phase) * 30;
-            d.targetY = margin + (d.zone.row + 0.5) / FIELD_ROWS * usableH + Math.cos(t + d.phase) * 30;
-          } else if (mode === 'grid') {
-            const cols = 6;
-            const rows = 4;
-            const col = i % cols;
-            const row = Math.floor(i / cols) % rows;
-            d.targetX = margin + (col + 0.5) / cols * usableW;
-            d.targetY = margin + (row + 0.5) / rows * usableH;
-          } else if (mode === 'sweep') {
-            const sweepX = margin + ((t * 30 + i * 15) % usableW);
-            const row = Math.floor(i / 6);
-            d.targetX = sweepX;
-            d.targetY = margin + (row + 0.5) / FIELD_ROWS * usableH;
-          } else if (mode === 'converge') {
-            const angle = (i / DRONE_COUNT) * Math.PI * 2 + t * 0.5;
-            const radius = 80 + Math.sin(t * 2 + i) * 20;
-            d.targetX = w / 2 + Math.cos(angle) * radius;
-            d.targetY = h / 2 + Math.sin(angle) * radius;
-          }
-        });
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, w, h);
-
-        // Draw field grid lines
-        ctx.strokeStyle = 'rgba(48,54,61,0.3)';
-        ctx.lineWidth = 1;
-        const margin = 60;
-        for (let i = 0; i <= FIELD_COLS; i++) {
-          const x = margin + (i / FIELD_COLS) * (w - margin * 2);
-          ctx.beginPath();
-          ctx.moveTo(x, margin);
-          ctx.lineTo(x, h - margin);
-          ctx.stroke();
-        }
-        for (let i = 0; i <= FIELD_ROWS; i++) {
-          const y = margin + (i / FIELD_ROWS) * (h - margin * 2);
-          ctx.beginPath();
-          ctx.moveTo(margin, y);
-          ctx.lineTo(w - margin, y);
-          ctx.stroke();
-        }
-
-        updateTargets();
-
-        // Draw connections
-        for (let i = 0; i < drones.length; i++) {
-          for (let j = i + 1; j < drones.length; j++) {
-            const dx = drones[i].x - drones[j].x;
-            const dy = drones[i].y - drones[j].y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 120) {
-              ctx.beginPath();
-              ctx.moveTo(drones[i].x, drones[i].y);
-              ctx.lineTo(drones[j].x, drones[j].y);
-              ctx.strokeStyle = `rgba(0,210,106,${(1 - dist / 120) * 0.25})`;
-              ctx.lineWidth = 0.8;
-              ctx.stroke();
-            }
-          }
-        }
-
-        // Update and draw drones
-        drones.forEach((d) => {
-          const dx = d.targetX - d.x;
-          const dy = d.targetY - d.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist > 1) {
-            d.x += (dx / dist) * d.speed;
-            d.y += (dy / dist) * d.speed;
-          }
-
-          // Trail
-          d.trail.push({ x: d.x, y: d.y });
-          if (d.trail.length > 12) d.trail.shift();
-
-          // Draw trail
-          d.trail.forEach((p, idx) => {
-            const a = (idx / d.trail.length) * 0.15;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(0,210,106,${a})`;
-            ctx.fill();
-          });
-
-          // Draw drone body
-          ctx.beginPath();
-          ctx.arc(d.x, d.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = '#00d26a';
-          ctx.fill();
-
-          // Glow
-          ctx.beginPath();
-          ctx.arc(d.x, d.y, 10, 0, Math.PI * 2);
-          const grad = ctx.createRadialGradient(d.x, d.y, 2, d.x, d.y, 10);
-          grad.addColorStop(0, 'rgba(0,210,106,0.2)');
-          grad.addColorStop(1, 'rgba(0,210,106,0)');
-          ctx.fillStyle = grad;
-          ctx.fill();
-
-          // Scanning ring
-          if (d.scanning) {
-            const ringRadius = 15 + Math.sin(Date.now() * 0.005 + d.phase) * 5;
-            ctx.beginPath();
-            ctx.arc(d.x, d.y, ringRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(0,210,106,0.1)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        });
-
-        // Mode label
-        const canvasLabels = {
-          en: { scatter: 'RECONNAISSANCE', grid: 'FORMATION', sweep: 'SWEEP', converge: 'CONVERGENCE', nodes: 'ACTIVE NODES' },
-          es: { scatter: 'RECONOCIMIENTO', grid: 'FORMACION', sweep: 'BARRIDO', converge: 'CONVERGENCIA', nodes: 'NODOS ACTIVOS' },
-          zh: { scatter: '\u4FA6\u5BDF', grid: '\u7F16\u961F', sweep: '\u626B\u63A0', converge: '\u6C47\u805A', nodes: '\u6D3B\u8DC3\u8282\u70B9' },
-        };
-        const cLang = localStorage.getItem('enjambre-lang') || 'en';
-        const labels = canvasLabels[cLang] || canvasLabels.en;
-        ctx.fillStyle = 'rgba(0,210,106,0.6)';
-        ctx.font = '600 11px Inter, sans-serif';
-        ctx.letterSpacing = '2px';
-        ctx.fillText(labels[mode] || mode.toUpperCase(), margin, h - 30);
-
-        // Drone count
-        ctx.fillStyle = 'rgba(139,148,158,0.5)';
-        ctx.font = '500 11px Inter, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(`${DRONE_COUNT} ${labels.nodes || 'ACTIVE NODES'}`, w - margin, h - 30);
-        ctx.textAlign = 'left';
-
-        requestAnimationFrame(draw);
-      }
-
-      draw();
-    })();
-
-    // ── CASE CARD MINI CANVASES ──
-    document.querySelectorAll('.case-canvas').forEach(canvas => {
-      const ctx = canvas.getContext('2d');
-      const caseType = canvas.dataset.case;
-
-      function resize() {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-      }
-      resize();
-      window.addEventListener('resize', resize);
-
-      const dots = [];
-      for (let i = 0; i < 20; i++) {
-        dots.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 1.2,
-          vy: (Math.random() - 0.5) * 1.2,
-          size: 2 + Math.random() * 2
-        });
-      }
-
-      const colors = {
-        agri: { dot: '#00d26a', line: 'rgba(0,210,106,' },
-        logistics: { dot: '#a371f7', line: 'rgba(163,113,247,' },
-        rescue: { dot: '#c8a96e', line: 'rgba(200,169,110,' }
-      };
-      const color = colors[caseType] || colors.agri;
-
-      function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        dots.forEach(d => {
-          d.x += d.vx;
-          d.y += d.vy;
-          if (d.x < 0 || d.x > canvas.width) d.vx *= -1;
-          if (d.y < 0 || d.y > canvas.height) d.vy *= -1;
-
-          ctx.beginPath();
-          ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
-          ctx.fillStyle = color.dot;
-          ctx.fill();
-        });
-
-        for (let i = 0; i < dots.length; i++) {
-          for (let j = i + 1; j < dots.length; j++) {
-            const dx = dots[i].x - dots[j].x;
-            const dy = dots[i].y - dots[j].y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 80) {
-              ctx.beginPath();
-              ctx.moveTo(dots[i].x, dots[i].y);
-              ctx.lineTo(dots[j].x, dots[j].y);
-              ctx.strokeStyle = color.line + (1 - dist / 80) * 0.3 + ')';
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          }
-        }
-
-        requestAnimationFrame(animate);
-      }
-      animate();
-    });
-
-    // ── SMOOTH SCROLL FOR NAV ──
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth' });
-          document.getElementById('navLinks').classList.remove('open');
-        }
-      });
-    });
-
-    // ── i18n Multi-language support ──
-    const translations = {
-      en: {
-        navProblem:'Problem', navSolution:'Solution', navProcess:'Process', navCases:'Use Cases', navStack:'Tech Stack', navJoin:'Join the Swarm',
-        heroLine1:'Coordinate.', heroLine2:'Cultivate.', heroLine3:'Conquer.',
-        heroSub:'Decentralized swarm coordination for agricultural drones. No servers. No limits. Just collective intelligence flying over the land.',
-        heroAction:'See It In Action \u2192',
-        metricLand:"World's arable land in LATAM", metricLost:'Lost annually to inefficiency', metricServers:'Central servers required',
-        problemTitle:"The land produces.<br>Technology <span style=\"color:var(--earth)\">doesn't reach it.</span>",
-        problemSub:"Agricultural drones exist, but they fly alone. They don't coordinate, don't share data, don't scale. Precision agriculture is a privilege of those with connectivity and capital.",
-        stat1:'LATAM farmers without access to precision technology', stat2:'Pesticide overuse due to lack of real-time data',
-        stat3:'Water wasted in irrigation without coordinated sensors', stat4:'Single point of failure in centralized systems',
-        solutionTitle:'BitTorrent for<br><span style="color:var(--green)">agriculture.</span>',
-        solutionSub:'Each drone is an autonomous node. Together they form an intelligent swarm that self-organizes, shares data and acts collectively.',
-        feat1Title:'Decentralized', feat1Desc:'No central server, no single point of failure. Drones discover each other via mDNS and form an autonomous P2P mesh.',
-        feat2Title:'Collective Intelligence', feat2Desc:'Each drone runs TinyML models on-device. The swarm shares inferences via MQTT for coordinated decisions in milliseconds.',
-        feat3Title:'Edge-First', feat3Desc:"Works 100% offline. Data is processed where it's generated. Syncs with the cloud when there's connectivity, not when it needs it.",
-        processTitle:'Three steps.<br><span style="color:var(--green)">Zero complexity.</span>',
-        step1Title:'Deploy', step1Desc:'Place drones at the edge of the field. They self-discover via P2P mesh and partition the terrain by decentralized consensus.',
-        step2Title:'Coordinate', step2Desc:'The swarm shares NDVI readings, humidity and pest detection in real time. Tasks are dynamically redistributed.',
-        step3Title:'Act', step3Desc:'Spraying, seeding and precision monitoring executed collectively. The dashboard shows live telemetry.',
-        liveViz:'Live Visualization', vizTitle:'Watch the <span style="color:var(--green)">swarm</span> think.',
-        vizDrones:'12 Active drones', vizSync:'Syncing data', vizScan:'Scanning terrain',
-        casesTitle:'One protocol.<br><span style="color:var(--earth)">Infinite missions.</span>',
-        caseAgri:'Agriculture', case1Title:'Precision at Scale', case1Desc:'Coordinated spraying and monitoring across thousands of hectares. Zero overlap. Zero waste. Total coverage.',
-        caseLogistics:'Logistics', case2Title:'Rural Last Mile', case2Desc:'Coordinated supply delivery in areas without road infrastructure. The swarm optimizes routes in real time.',
-        caseRescue:'Rescue', case3Title:'Disaster Response', case3Desc:'Post-hurricane crop damage assessment over flooded or inaccessible terrain. Massive coverage, zero human risk.',
-        techTitle:'Engineering without<br><span style="color:var(--green)">compromise.</span>',
-        techEdge:'Rust + C++ \u2014 Real-time flight control and sensor fusion',
-        techAI:'TinyML \u2014 On-device models for route planning and anomaly detection',
-        techMesh:'libp2p + MQTT + WebRTC \u2014 Drone-to-drone communication without infrastructure',
-        techDash:'React + Three.js + D3 \u2014 Real-time visualization and mission control',
-        techData:'Edge-first with optional sync \u2014 100% operational offline',
-        specsTitle:'Specifications', specLatency:'Coordination latency', specDrones:'Drones per swarm', specDronesVal:'Up to 256',
-        specRange:'Mesh range', specRangeVal:'2km drone-to-drone', specModel:'On-device ML model', specUptime:'Uptime without cloud',
-        specCoverage:'Coverage per mission', specCoverageVal:'500+ hectares', specProtocol:'Protocol',
-        ctaLabel:'Join', ctaTitle:'The future of<br>agriculture <span style="color:var(--green)">flies in swarms.</span>',
-        ctaSub:"We're building the open protocol that democratizes precision agriculture for all of Latin America.",
-        ctaBtn1:'Support on DoraHacks \u2192', ctaBtn2:'Contribute \u2197',
-      },
-      es: {
-        navProblem:'Problema', navSolution:'Soluci\u00f3n', navProcess:'Proceso', navCases:'Casos de Uso', navStack:'Stack', navJoin:'Unirse al Enjambre',
-        heroLine1:'Coordina.', heroLine2:'Cultiva.', heroLine3:'Conquista.',
-        heroSub:'Coordinaci\u00f3n descentralizada de enjambres de drones agr\u00edcolas. Sin servidores. Sin l\u00edmites. Solo inteligencia colectiva volando sobre la tierra.',
-        heroAction:'Ver en Acci\u00f3n \u2192',
-        metricLand:'Tierra cultivable mundial en LATAM', metricLost:'Perdidos anualmente en ineficiencia', metricServers:'Servidores centrales requeridos',
-        problemTitle:'La tierra produce.<br>La tecnolog\u00eda <span style="color:var(--earth)">no llega.</span>',
-        problemSub:'Los drones agr\u00edcolas existen, pero vuelan solos. No se coordinan, no comparten datos, no escalan. La agricultura de precisi\u00f3n es un privilegio de los que tienen conectividad y capital.',
-        stat1:'Agricultores LATAM sin acceso a tecnolog\u00eda de precisi\u00f3n', stat2:'Sobreuso de pesticidas por falta de datos en tiempo real',
-        stat3:'Agua desperdiciada en riego sin sensores coordinados', stat4:'Punto \u00fanico de falla en sistemas centralizados',
-        solutionTitle:'BitTorrent para<br>la <span style="color:var(--green)">agricultura.</span>',
-        solutionSub:'Cada dron es un nodo aut\u00f3nomo. Juntos forman un enjambre inteligente que se auto-organiza, comparte datos y act\u00faa colectivamente.',
-        feat1Title:'Descentralizado', feat1Desc:'Sin servidor central, sin punto \u00fanico de falla. Los drones se descubren entre s\u00ed v\u00eda mDNS y forman una mesh P2P aut\u00f3noma.',
-        feat2Title:'Inteligencia Colectiva', feat2Desc:'Cada dron ejecuta modelos TinyML on-device. El enjambre comparte inferencias v\u00eda MQTT para decisiones coordinadas en milisegundos.',
-        feat3Title:'Edge-First', feat3Desc:'Funciona 100% offline. Los datos se procesan donde se generan. Sincroniza con la nube cuando hay conectividad, no cuando la necesita.',
-        processTitle:'Tres pasos.<br><span style="color:var(--green)">Cero complejidad.</span>',
-        step1Title:'Desplegar', step1Desc:'Coloca los drones al borde del campo. Se auto-descubren v\u00eda mesh P2P y particionan el terreno por consenso descentralizado.',
-        step2Title:'Coordinar', step2Desc:'El enjambre comparte lecturas NDVI, humedad y detecci\u00f3n de plagas en tiempo real. Las tareas se redistribuyen din\u00e1micamente.',
-        step3Title:'Actuar', step3Desc:'Fumigaci\u00f3n, siembra y monitoreo de precisi\u00f3n ejecutados colectivamente. El dashboard muestra telemetr\u00eda en vivo.',
-        liveViz:'Visualizaci\u00f3n en Vivo', vizTitle:'Mira el <span style="color:var(--green)">enjambre</span> pensar.',
-        vizDrones:'12 Drones activos', vizSync:'Sincronizando datos', vizScan:'Escaneando terreno',
-        casesTitle:'Un protocolo.<br><span style="color:var(--earth)">Infinitas misiones.</span>',
-        caseAgri:'Agricultura', case1Title:'Precisi\u00f3n a Escala', case1Desc:'Fumigaci\u00f3n y monitoreo coordinado sobre miles de hect\u00e1reas. Cero superposici\u00f3n. Cero desperdicio. Cobertura total.',
-        caseLogistics:'Log\u00edstica', case2Title:'\u00daltima Milla Rural', case2Desc:'Entrega coordinada de suministros en zonas sin infraestructura vial. El enjambre optimiza rutas en tiempo real.',
-        caseRescue:'Rescate', case3Title:'Respuesta a Desastres', case3Desc:'Evaluaci\u00f3n post-hurac\u00e1n de da\u00f1os en cultivos sobre terreno inundado o inaccesible. Cobertura masiva, cero riesgo humano.',
-        techTitle:'Ingenier\u00eda sin<br><span style="color:var(--green)">compromisos.</span>',
-        techEdge:'Rust + C++ \u2014 Control de vuelo y fusi\u00f3n de sensores en tiempo real',
-        techAI:'TinyML \u2014 Modelos on-device para planificaci\u00f3n de rutas y detecci\u00f3n de anomal\u00edas',
-        techMesh:'libp2p + MQTT + WebRTC \u2014 Comunicaci\u00f3n dron-a-dron sin infraestructura',
-        techDash:'React + Three.js + D3 \u2014 Visualizaci\u00f3n y control de misi\u00f3n en tiempo real',
-        techData:'Edge-first con sync opcional \u2014 100% operativo offline',
-        specsTitle:'Especificaciones', specLatency:'Latencia de coordinaci\u00f3n', specDrones:'Drones por enjambre', specDronesVal:'Hasta 256',
-        specRange:'Rango mesh', specRangeVal:'2km dron-a-dron', specModel:'Modelo ML on-device', specUptime:'Uptime sin cloud',
-        specCoverage:'Cobertura por misi\u00f3n', specCoverageVal:'500+ hect\u00e1reas', specProtocol:'Protocolo',
-        ctaLabel:'\u00danete', ctaTitle:'El futuro de la<br>agricultura <span style="color:var(--green)">vuela en enjambre.</span>',
-        ctaSub:'Construimos el protocolo abierto que democratiza la agricultura de precisi\u00f3n para toda Latinoam\u00e9rica.',
-        ctaBtn1:'Apoyar en DoraHacks \u2192', ctaBtn2:'Contribuir \u2197',
-      },
-      zh: {
-        navProblem:'\u95EE\u9898', navSolution:'\u89E3\u51B3\u65B9\u6848', navProcess:'\u6D41\u7A0B', navCases:'\u7528\u4F8B', navStack:'\u6280\u672F\u6808', navJoin:'\u52A0\u5165\u96C6\u7FA4',
-        heroLine1:'\u534F\u8C03\u3002', heroLine2:'\u57F9\u80B2\u3002', heroLine3:'\u5F81\u670D\u3002',
-        heroSub:'\u519C\u4E1A\u65E0\u4EBA\u673A\u7684\u53BB\u4E2D\u5FC3\u5316\u96C6\u7FA4\u534F\u8C03\u3002\u65E0\u670D\u52A1\u5668\u3002\u65E0\u9650\u5236\u3002\u53EA\u6709\u96C6\u4F53\u667A\u6167\u98DE\u8D8A\u5927\u5730\u3002',
-        heroAction:'\u67E5\u770B\u6F14\u793A \u2192',
-        metricLand:'\u62C9\u4E01\u7F8E\u6D32\u5168\u7403\u8015\u5730\u5360\u6BD4', metricLost:'\u6BCF\u5E74\u56E0\u4F4E\u6548\u800C\u635F\u5931', metricServers:'\u6240\u9700\u4E2D\u5FC3\u670D\u52A1\u5668',
-        problemTitle:'\u571F\u5730\u5728\u751F\u4EA7\u3002<br>\u6280\u672F<span style="color:var(--earth)">\u65E0\u6CD5\u89E6\u53CA\u3002</span>',
-        problemSub:'\u519C\u4E1A\u65E0\u4EBA\u673A\u5DF2\u7ECF\u5B58\u5728\uFF0C\u4F46\u5B83\u4EEC\u5355\u72EC\u98DE\u884C\u3002\u4E0D\u534F\u8C03\u3001\u4E0D\u5171\u4EAB\u6570\u636E\u3001\u4E0D\u53EF\u6269\u5C55\u3002\u7CBE\u51C6\u519C\u4E1A\u662F\u62E5\u6709\u8FDE\u63A5\u548C\u8D44\u672C\u7684\u4EBA\u7684\u7279\u6743\u3002',
-        stat1:'\u62C9\u7F8E\u519C\u6C11\u65E0\u6CD5\u83B7\u5F97\u7CBE\u51C6\u6280\u672F', stat2:'\u56E0\u7F3A\u4E4F\u5B9E\u65F6\u6570\u636E\u800C\u8FC7\u5EA6\u4F7F\u7528\u519C\u836F',
-        stat3:'\u65E0\u534F\u8C03\u4F20\u611F\u5668\u7684\u7048\u6E89\u6D6A\u8D39\u7684\u6C34', stat4:'\u4E2D\u5FC3\u5316\u7CFB\u7EDF\u7684\u5355\u70B9\u6545\u969C',
-        solutionTitle:'BitTorrent<br>\u7528\u4E8E<span style="color:var(--green)">\u519C\u4E1A\u3002</span>',
-        solutionSub:'\u6BCF\u67B6\u65E0\u4EBA\u673A\u90FD\u662F\u4E00\u4E2A\u81EA\u4E3B\u8282\u70B9\u3002\u5B83\u4EEC\u5171\u540C\u5F62\u6210\u4E00\u4E2A\u667A\u80FD\u96C6\u7FA4\uFF0C\u81EA\u7EC4\u7EC7\u3001\u5171\u4EAB\u6570\u636E\u5E76\u96C6\u4F53\u884C\u52A8\u3002',
-        feat1Title:'\u53BB\u4E2D\u5FC3\u5316', feat1Desc:'\u65E0\u4E2D\u5FC3\u670D\u52A1\u5668\uFF0C\u65E0\u5355\u70B9\u6545\u969C\u3002\u65E0\u4EBA\u673A\u901A\u8FC7mDNS\u76F8\u4E92\u53D1\u73B0\u5E76\u5F62\u6210\u81EA\u4E3B P2P\u7F51\u7EDC\u3002',
-        feat2Title:'\u96C6\u4F53\u667A\u6167', feat2Desc:'\u6BCF\u67B6\u65E0\u4EBA\u673A\u8FD0\u884CTinyML\u6A21\u578B\u3002\u96C6\u7FA4\u901A\u8FC7MQTT\u5171\u4EAB\u63A8\u7406\u7ED3\u679C\uFF0C\u6BEB\u79D2\u7EA7\u534F\u8C03\u51B3\u7B56\u3002',
-        feat3Title:'\u8FB9\u7F18\u4F18\u5148', feat3Desc:'\u5B8C\u5168\u79BB\u7EBF\u8FD0\u884C\u3002\u6570\u636E\u5728\u4EA7\u751F\u5730\u5904\u7406\u3002\u6709\u8FDE\u63A5\u65F6\u540C\u6B65\u4E91\u7AEF\uFF0C\u800C\u4E0D\u662F\u9700\u8981\u65F6\u624D\u540C\u6B65\u3002',
-        processTitle:'\u4E09\u4E2A\u6B65\u9AA4\u3002<br><span style="color:var(--green)">\u96F6\u590D\u6742\u6027\u3002</span>',
-        step1Title:'\u90E8\u7F72', step1Desc:'\u5C06\u65E0\u4EBA\u673A\u653E\u5728\u7530\u5730\u8FB9\u7F18\u3002\u5B83\u4EEC\u901A\u8FC7P2P\u7F51\u7EDC\u81EA\u52A8\u53D1\u73B0\u5E76\u901A\u8FC7\u53BB\u4E2D\u5FC3\u5316\u5171\u8BC6\u5206\u5272\u5730\u5F62\u3002',
-        step2Title:'\u534F\u8C03', step2Desc:'\u96C6\u7FA4\u5B9E\u65F6\u5171\u4EABNDVI\u8BFB\u6570\u3001\u6E7F\u5EA6\u548C\u75C5\u866B\u5BB3\u68C0\u6D4B\u3002\u4EFB\u52A1\u52A8\u6001\u91CD\u65B0\u5206\u914D\u3002',
-        step3Title:'\u884C\u52A8', step3Desc:'\u96C6\u4F53\u6267\u884C\u55B7\u6D12\u3001\u64AD\u79CD\u548C\u7CBE\u51C6\u76D1\u63A7\u3002\u4EEA\u8868\u677F\u663E\u793A\u5B9E\u65F6\u9065\u6D4B\u3002',
-        liveViz:'\u5B9E\u65F6\u53EF\u89C6\u5316', vizTitle:'\u89C2\u770B<span style="color:var(--green)">\u96C6\u7FA4</span>\u601D\u8003\u3002',
-        vizDrones:'12\u67B6\u6D3B\u8DC3\u65E0\u4EBA\u673A', vizSync:'\u6570\u636E\u540C\u6B65\u4E2D', vizScan:'\u5730\u5F62\u626B\u63CF\u4E2D',
-        casesTitle:'\u4E00\u4E2A\u534F\u8BAE\u3002<br><span style="color:var(--earth)">\u65E0\u9650\u4EFB\u52A1\u3002</span>',
-        caseAgri:'\u519C\u4E1A', case1Title:'\u89C4\u6A21\u5316\u7CBE\u51C6', case1Desc:'\u5728\u6570\u5343\u516C\u9877\u8303\u56F4\u5185\u534F\u8C03\u55B7\u6D12\u548C\u76D1\u63A7\u3002\u96F6\u91CD\u53E0\u3002\u96F6\u6D6A\u8D39\u3002\u5168\u9762\u8986\u76D6\u3002',
-        caseLogistics:'\u7269\u6D41', case2Title:'\u519C\u6751\u6700\u540E\u4E00\u516C\u91CC', case2Desc:'\u5728\u65E0\u9053\u8DEF\u57FA\u7840\u8BBE\u65BD\u7684\u5730\u533A\u534F\u8C03\u4F9B\u5E94\u4EA4\u4ED8\u3002\u96C6\u7FA4\u5B9E\u65F6\u4F18\u5316\u8DEF\u7EBF\u3002',
-        caseRescue:'\u6551\u63F4', case3Title:'\u707E\u5BB3\u54CD\u5E94', case3Desc:'\u5728\u6D2A\u6C34\u6216\u65E0\u6CD5\u8FDB\u5165\u7684\u5730\u5F62\u4E0A\u8FDB\u884C\u98D3\u540E\u4F5C\u7269\u635F\u5BB3\u8BC4\u4F30\u3002\u5927\u89C4\u6A21\u8986\u76D6\uFF0C\u96F6\u4EBA\u5458\u98CE\u9669\u3002',
-        techTitle:'\u5DE5\u7A0B<br>\u65E0<span style="color:var(--green)">\u59A5\u534F\u3002</span>',
-        techEdge:'Rust + C++ \u2014 \u5B9E\u65F6\u98DE\u884C\u63A7\u5236\u548C\u4F20\u611F\u5668\u878D\u5408',
-        techAI:'TinyML \u2014 \u7528\u4E8E\u8DEF\u5F84\u89C4\u5212\u548C\u5F02\u5E38\u68C0\u6D4B\u7684\u8BBE\u5907\u7AEF\u6A21\u578B',
-        techMesh:'libp2p + MQTT + WebRTC \u2014 \u65E0\u57FA\u7840\u8BBE\u65BD\u7684\u65E0\u4EBA\u673A\u5BF9\u65E0\u4EBA\u673A\u901A\u4FE1',
-        techDash:'React + Three.js + D3 \u2014 \u5B9E\u65F6\u53EF\u89C6\u5316\u548C\u4EFB\u52A1\u63A7\u5236',
-        techData:'\u8FB9\u7F18\u4F18\u5148\uFF0C\u53EF\u9009\u540C\u6B65 \u2014 100%\u79BB\u7EBF\u8FD0\u884C',
-        specsTitle:'\u89C4\u683C', specLatency:'\u534F\u8C03\u5EF6\u8FDF', specDrones:'\u6BCF\u4E2A\u96C6\u7FA4\u65E0\u4EBA\u673A\u6570', specDronesVal:'\u6700\u591A256\u67B6',
-        specRange:'\u7F51\u7EDC\u8303\u56F4', specRangeVal:'2\u516C\u91CC\u65E0\u4EBA\u673A\u5BF9\u65E0\u4EBA\u673A', specModel:'\u8BBE\u5907\u7AEML\u6A21\u578B', specUptime:'\u65E0\u4E91\u6B63\u5E38\u8FD0\u884C\u65F6\u95F4',
-        specCoverage:'\u6BCF\u6B21\u4EFB\u52A1\u8986\u76D6', specCoverageVal:'500+\u516C\u9877', specProtocol:'\u534F\u8BAE',
-        ctaLabel:'\u52A0\u5165', ctaTitle:'\u519C\u4E1A\u7684\u672A\u6765<br><span style="color:var(--green)">\u4EE5\u96C6\u7FA4\u65B9\u5F0F\u98DE\u884C\u3002</span>',
-        ctaSub:'\u6211\u4EEC\u6B63\u5728\u6784\u5EFA\u4E00\u4E2A\u5F00\u653E\u534F\u8BAE\uFF0C\u4E3A\u6574\u4E2A\u62C9\u4E01\u7F8E\u6D32\u5B9E\u73B0\u7CBE\u51C6\u519C\u4E1A\u6C11\u4E3B\u5316\u3002',
-        ctaBtn1:'\u5728DoraHacks\u4E0A\u652F\u6301 \u2192', ctaBtn2:'\u8D21\u732E \u2197',
-      }
-    };
-
-    let currentLang = localStorage.getItem('enjambre-lang') || 'en';
-
-    function applyTranslations(lang) {
-      currentLang = lang;
-      localStorage.setItem('enjambre-lang', lang);
-      const t = translations[lang] || translations.en;
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (t[key] !== undefined) {
-          if (t[key].includes('<')) { el.innerHTML = t[key]; }
-          else { el.textContent = t[key]; }
-        }
-      });
-      const btn = document.getElementById('langBtn');
-      if (btn) btn.innerHTML = '\ud83c\udf10 ' + lang.toUpperCase();
-      document.querySelectorAll('.lang-option').forEach(opt => {
-        opt.classList.toggle('active', opt.dataset.lang === lang);
-      });
-    }
-
-    function toggleLangDropdown() {
-      document.getElementById('langDropdown').classList.toggle('show');
-    }
-
-    function setLang(lang) {
-      applyTranslations(lang);
-      document.getElementById('langDropdown').classList.remove('show');
-    }
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.lang-selector')) {
-        const dd = document.getElementById('langDropdown');
-        if (dd) dd.classList.remove('show');
       }
     });
+  }
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.lang-selector'))document.getElementById('lang-dropdown').classList.remove('open');
+});
 
-    applyTranslations(currentLang);
-  </script>
+/* ═══ CURSOR ═══ */
+(function(){
+  const dot=document.querySelector('.cursor-dot'),ring=document.querySelector('.cursor-ring');
+  if(!dot||matchMedia('(pointer:coarse)').matches)return;
+  let mx=0,my=0,dx=0,dy=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  const interactives='a,button,[data-tilt],.magnetic,input,.demo-btn';
+  document.addEventListener('mouseover',e=>{if(e.target.closest(interactives)){dot.classList.add('active');ring.classList.add('active')}});
+  document.addEventListener('mouseout',e=>{if(e.target.closest(interactives)){dot.classList.remove('active');ring.classList.remove('active')}});
+  (function loop(){
+    dx+=(mx-dx)*.18;dy+=(my-dy)*.18;
+    rx+=(mx-rx)*.08;ry+=(my-ry)*.08;
+    dot.style.transform=`translate(${dx-dot.offsetWidth/2}px,${dy-dot.offsetHeight/2}px)`;
+    ring.style.transform=`translate(${rx-ring.offsetWidth/2}px,${ry-ring.offsetHeight/2}px)`;
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* ═══ SCROLL PROGRESS ═══ */
+(function(){
+  const bar=document.querySelector('.scroll-progress');
+  window.addEventListener('scroll',()=>{
+    const h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(window.scrollY/h*100)+'%';
+  },{passive:true});
+})();
+
+/* ═══ NAV ═══ */
+(function(){
+  const nav=document.getElementById('nav'),btn=document.getElementById('menuBtn'),links=document.getElementById('navLinks');
+  window.addEventListener('scroll',()=>{nav.classList.toggle('shrink',window.scrollY>60)},{passive:true});
+  btn.addEventListener('click',()=>links.classList.toggle('open'));
+})();
+
+/* ═══ HERO CHAR-BY-CHAR ═══ */
+(function(){
+  const headline=document.getElementById('heroHeadline');
+  const words=headline.querySelectorAll('.word');
+  let charIndex=0;
+  words.forEach(word=>{
+    const text=word.textContent;
+    const cls=word.className.replace('word','').trim();
+    word.textContent='';
+    word.setAttribute('aria-label',text);
+    for(let i=0;i<text.length;i++){
+      const span=document.createElement('span');
+      span.className='char';
+      if(cls)cls.split(' ').forEach(c=>c&&span.classList.add(c));
+      span.textContent=text[i]===' '?'\u00A0':text[i];
+      const baseDelay=charIndex*40;
+      const randomOffset=Math.random()*20-10;
+      span.style.transitionDelay=(baseDelay+randomOffset)+'ms';
+      word.appendChild(span);
+      charIndex++;
+    }
+  });
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      headline.querySelectorAll('.char').forEach(c=>{
+        c.style.opacity='1';c.style.transform='translateY(0) rotate(0)';
+        c.style.transition='opacity .6s cubic-bezier(0.22,1,0.36,1), transform .7s cubic-bezier(0.34,1.56,0.64,1)';
+      });
+      setTimeout(()=>{
+        const tag=document.querySelector('.hero-tag');
+        tag.style.transition='all .7s cubic-bezier(0.22,1,0.36,1)';tag.style.opacity='1';tag.style.transform='none';
+      },200);
+      setTimeout(()=>{
+        const sub=document.getElementById('heroSub');
+        sub.style.transition='all .8s cubic-bezier(0.22,1,0.36,1)';sub.style.opacity='1';sub.style.transform='none';
+      },500);
+      setTimeout(()=>{
+        const ctas=document.getElementById('heroCtas');
+        ctas.style.transition='all .8s cubic-bezier(0.22,1,0.36,1)';ctas.style.opacity='1';ctas.style.transform='none';
+      },700);
+    },200);
+  });
+})();
+
+/* ═══ SCROLL REVEAL ═══ */
+(function(){
+  const obs=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        if(e.target.classList.contains('stagger-child')){
+          const siblings=Array.from(e.target.parentElement.children).filter(c=>c.classList.contains('stagger-child'));
+          siblings.forEach((s,i)=>{setTimeout(()=>s.classList.add('visible'),i*120)});
+        }
+        obs.unobserve(e.target);
+      }
+    });
+  },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.stagger-child').forEach(el=>obs.observe(el));
+})();
+
+/* ═══ CANVAS PARALLAX ═══ */
+(function(){
+  const wrap=document.getElementById('heroCanvasWrap');
+  if(!wrap)return;
+  window.addEventListener('scroll',()=>{
+    wrap.style.transform=`translateY(${window.scrollY*-0.06}px)`;
+  },{passive:true});
+})();
+
+/* ═══ MESH ORB MOTION ═══ */
+(function(){
+  const orbs=document.querySelectorAll('.mesh-orb');
+  let time=0;
+  function animateOrbs(){
+    time+=0.008;
+    orbs.forEach((orb,i)=>{
+      const speed=0.5+i*0.3;const offset=i*2.1;
+      const x=Math.sin(time*speed+offset)*5;
+      const y=Math.sin(time*speed*0.7+offset+1)*4;
+      const s=1+Math.sin(time*speed*0.4+offset)*0.05;
+      orb.style.transform=`translate(${x}vw,${y}vh) scale(${s})`;
+    });
+    requestAnimationFrame(animateOrbs);
+  }
+  animateOrbs();
+})();
+
+/* ═══ MAGNETIC BUTTONS ═══ */
+(function(){
+  document.querySelectorAll('.magnetic').forEach(btn=>{
+    btn.addEventListener('mousemove',e=>{
+      const r=btn.getBoundingClientRect();
+      const x=e.clientX-r.left-r.width/2;
+      const y=e.clientY-r.top-r.height/2;
+      btn.style.transform=`translate(${x*.2}px,${y*.2}px)`;
+    });
+    btn.addEventListener('mouseleave',()=>{
+      btn.style.transform='';btn.style.transition='transform .4s cubic-bezier(0.34,1.56,0.64,1)';
+      setTimeout(()=>btn.style.transition='',400);
+    });
+  });
+})();
+
+/* ═══ TILT CARDS ═══ */
+(function(){
+  document.querySelectorAll('[data-tilt]').forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5;
+      const y=(e.clientY-r.top)/r.height-.5;
+      card.style.transform=`perspective(800px) rotateY(${x*6}deg) rotateX(${-y*6}deg) translateY(-4px)`;
+    });
+    card.addEventListener('mouseleave',()=>{
+      card.style.transform='';card.style.transition='transform .5s cubic-bezier(0.34,1.56,0.64,1)';
+      setTimeout(()=>card.style.transition='',500);
+    });
+  });
+})();
+
+/* ═══ ANIMATED COUNTERS ═══ */
+(function(){
+  const fmt=(n)=>{
+    if(n>=1e6)return(n/1e6).toFixed(n%1e6?1:0).replace(/\.0$/,'')+'M';
+    if(n>=1e3)return n.toLocaleString();
+    return n.toString();
+  };
+  const obs=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting)return;
+      const el=e.target;const target=+el.dataset.target;
+      const prefix=el.dataset.prefix||'';const suffix=el.dataset.suffix||'';
+      const dur=1800;const t0=performance.now();
+      (function tick(now){
+        const p=Math.min(1,(now-t0)/dur);
+        const ease=1-Math.pow(1-p,4)*(1-Math.sin(p*Math.PI*.5));
+        const val=Math.round(ease*target);
+        el.textContent=prefix+fmt(val)+suffix;
+        if(p<1)requestAnimationFrame(tick);
+        else el.textContent=prefix+fmt(target)+suffix;
+      })(t0);
+      obs.unobserve(el);
+    });
+  },{threshold:.5});
+  document.querySelectorAll('.stat-num[data-target]').forEach(el=>obs.observe(el));
+})();
+
+/* ═══ SMOOTH SCROLL ═══ */
+(function(){
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      e.preventDefault();
+      const target=document.querySelector(a.getAttribute('href'));
+      if(!target)return;
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+      document.getElementById('navLinks').classList.remove('open');
+    });
+  });
+})();
+
+/* ═══ HERO SWARM CANVAS ═══ */
+(function(){
+  const canvas=document.getElementById('swarmCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let W=canvas.width,H=canvas.height;
+  const drones=[];
+  const DRONE_COUNT=20;
+  for(let i=0;i<DRONE_COUNT;i++){
+    drones.push({
+      x:Math.random()*W,y:Math.random()*H,
+      tx:Math.random()*W,ty:Math.random()*H,
+      vx:0,vy:0,size:4+Math.random()*3,
+      hue:140+Math.random()*40,phase:Math.random()*Math.PI*2
+    });
+  }
+  let time=0;
+  function updateTargets(){
+    const cols=5,rows=4,gapX=W/(cols+1),gapY=H/(rows+1);
+    drones.forEach((d,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      d.tx=gapX*(col+1)+Math.sin(time*0.5+i)*20;
+      d.ty=gapY*(row+1)+Math.cos(time*0.4+i*0.7)*15;
+    });
+  }
+  function draw(){
+    time+=0.016;
+    ctx.clearRect(0,0,W,H);
+    updateTargets();
+    ctx.strokeStyle='rgba(0,210,106,0.08)';ctx.lineWidth=1;
+    for(let i=0;i<drones.length;i++){
+      for(let j=i+1;j<drones.length;j++){
+        const dx=drones[i].x-drones[j].x,dy=drones[i].y-drones[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<150){
+          ctx.globalAlpha=1-dist/150;
+          ctx.beginPath();ctx.moveTo(drones[i].x,drones[i].y);ctx.lineTo(drones[j].x,drones[j].y);ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha=1;
+    drones.forEach(d=>{
+      d.vx+=(d.tx-d.x)*0.02;d.vy+=(d.ty-d.y)*0.02;
+      d.vx*=0.92;d.vy*=0.92;
+      d.x+=d.vx;d.y+=d.vy;
+      const pulse=0.8+Math.sin(time*3+d.phase)*0.2;
+      ctx.fillStyle=`hsla(${d.hue},80%,55%,${pulse*0.8})`;
+      ctx.beginPath();ctx.arc(d.x,d.y,d.size,0,Math.PI*2);ctx.fill();
+      const grd=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,d.size*4);
+      grd.addColorStop(0,`hsla(${d.hue},80%,55%,0.15)`);grd.addColorStop(1,'transparent');
+      ctx.fillStyle=grd;ctx.beginPath();ctx.arc(d.x,d.y,d.size*4,0,Math.PI*2);ctx.fill();
+      const pLen=d.size*2;
+      ctx.strokeStyle=`hsla(${d.hue},60%,60%,0.3)`;ctx.lineWidth=1;
+      const angle=time*8+d.phase;
+      ctx.beginPath();ctx.moveTo(d.x-Math.cos(angle)*pLen,d.y-Math.sin(angle)*pLen);
+      ctx.lineTo(d.x+Math.cos(angle)*pLen,d.y+Math.sin(angle)*pLen);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(d.x-Math.cos(angle+Math.PI/2)*pLen,d.y-Math.sin(angle+Math.PI/2)*pLen);
+      ctx.lineTo(d.x+Math.cos(angle+Math.PI/2)*pLen,d.y+Math.sin(angle+Math.PI/2)*pLen);ctx.stroke();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ═══ DEMO CANVAS ═══ */
+(function(){
+  const canvas=document.getElementById('demoCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let W=canvas.width,H=canvas.height;
+  const drones=[];
+  const COUNT=24;
+  for(let i=0;i<COUNT;i++){
+    drones.push({x:W/2+Math.random()*100-50,y:H/2+Math.random()*100-50,tx:0,ty:0,vx:0,vy:0,size:5,phase:Math.random()*Math.PI*2});
+  }
+  let currentFormation='grid';
+  function getFormation(name){
+    const positions=[];
+    switch(name){
+      case 'grid':{
+        const cols=6,rows=4,gx=W/(cols+1),gy=H/(rows+1);
+        for(let i=0;i<COUNT;i++){positions.push({x:gx*(i%cols+1),y:gy*(Math.floor(i/cols)+1)});}break;
+      }
+      case 'circle':{
+        for(let i=0;i<COUNT;i++){
+          const a=(i/COUNT)*Math.PI*2;const r=Math.min(W,H)*0.35;
+          positions.push({x:W/2+Math.cos(a)*r,y:H/2+Math.sin(a)*r});
+        }break;
+      }
+      case 'vform':{
+        const half=Math.floor(COUNT/2);
+        for(let i=0;i<COUNT;i++){
+          const side=i<half?-1:1;const idx=i<half?i:i-half;
+          positions.push({x:W/2+side*idx*35,y:80+idx*30});
+        }break;
+      }
+      case 'spiral':{
+        for(let i=0;i<COUNT;i++){
+          const a=(i/COUNT)*Math.PI*6;const r=20+i*8;
+          positions.push({x:W/2+Math.cos(a)*r,y:H/2+Math.sin(a)*r});
+        }break;
+      }
+      case 'scatter':{
+        for(let i=0;i<COUNT;i++){
+          positions.push({x:60+Math.random()*(W-120),y:60+Math.random()*(H-120)});
+        }break;
+      }
+    }
+    return positions;
+  }
+  function setFormation(name){
+    currentFormation=name;
+    const pos=getFormation(name);
+    drones.forEach((d,i)=>{if(pos[i]){d.tx=pos[i].x;d.ty=pos[i].y;}});
+  }
+  setFormation('grid');
+  document.querySelectorAll('.demo-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.demo-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      setFormation(btn.dataset.formation);
+    });
+  });
+  let time=0;
+  function draw(){
+    time+=0.016;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(0,210,106,0.03)';ctx.lineWidth=1;
+    for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='rgba(0,210,106,0.1)';
+    for(let i=0;i<drones.length;i++){
+      for(let j=i+1;j<drones.length;j++){
+        const dx=drones[i].x-drones[j].x,dy=drones[i].y-drones[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          ctx.globalAlpha=(1-dist/120)*0.5;
+          ctx.beginPath();ctx.moveTo(drones[i].x,drones[i].y);ctx.lineTo(drones[j].x,drones[j].y);ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha=1;
+    drones.forEach(d=>{
+      d.vx+=(d.tx-d.x)*0.03;d.vy+=(d.ty-d.y)*0.03;
+      d.vx*=0.9;d.vy*=0.9;
+      d.x+=d.vx;d.y+=d.vy;
+      const pulse=0.7+Math.sin(time*3+d.phase)*0.3;
+      const grd=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,d.size*5);
+      grd.addColorStop(0,`rgba(0,210,106,${0.2*pulse})`);grd.addColorStop(1,'transparent');
+      ctx.fillStyle=grd;ctx.beginPath();ctx.arc(d.x,d.y,d.size*5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=`rgba(0,210,106,${pulse})`;
+      ctx.beginPath();ctx.arc(d.x,d.y,d.size,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.6)';
+      ctx.beginPath();ctx.arc(d.x,d.y,d.size*0.4,0,Math.PI*2);ctx.fill();
+      const a=time*10+d.phase;const pL=d.size*2.5;
+      ctx.strokeStyle=`rgba(0,210,106,0.25)`;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(d.x-Math.cos(a)*pL,d.y-Math.sin(a)*pL);ctx.lineTo(d.x+Math.cos(a)*pL,d.y+Math.sin(a)*pL);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(d.x-Math.cos(a+1.57)*pL,d.y-Math.sin(a+1.57)*pL);ctx.lineTo(d.x+Math.cos(a+1.57)*pL,d.y+Math.sin(a+1.57)*pL);ctx.stroke();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+  function resize(){
+    const w=canvas.parentElement.offsetWidth;
+    if(w<820){W=canvas.width=Math.min(w-32,600);H=canvas.height=300;}
+    else{W=canvas.width=800;H=canvas.height=400;}
+    setFormation(currentFormation);
+  }
+  window.addEventListener('resize',resize);resize();
+})();
+
+/* ═══ PARALLAX LAYERS ═══ */
+(function(){
+  let ticking=false;
+  window.addEventListener('scroll',()=>{
+    if(!ticking){
+      requestAnimationFrame(()=>{
+        const sy=window.scrollY;
+        document.querySelectorAll('.brand-pattern').forEach(el=>{
+          el.style.transform=`translateY(${sy*0.05}px)`;
+        });
+        const bigNum=document.querySelector('.problem-big-number');
+        if(bigNum){
+          const rect=bigNum.closest('section').getBoundingClientRect();
+          bigNum.style.transform=`translate(-50%,-50%) translateY(${rect.top*-0.1}px)`;
+        }
+        document.querySelectorAll('.uc-float').forEach((el,i)=>{
+          el.style.transform=`translateY(${Math.sin(sy*0.003+i)*20}px)`;
+        });
+        ticking=false;
+      });
+      ticking=true;
+    }
+  },{passive:true});
+})();
+</script>
 </body>
 </html>
